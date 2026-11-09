@@ -127,6 +127,7 @@ jobs:
         run: |
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" dist/*.dmg dist/checksums.txt --clobber
+            gh release edit "$TAG" --notes-file "$RUNNER_TEMP/notes.md"
           else
             gh release create "$TAG" dist/*.dmg dist/checksums.txt \
               --title "Gloss ${TAG}" --notes-file "$RUNNER_TEMP/notes.md" --generate-notes --verify-tag
