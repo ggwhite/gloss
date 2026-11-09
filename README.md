@@ -1,131 +1,137 @@
-<p align="center"><img src="Resources/AppIcon-1024.png" width="128" alt="Gloss icon"></p>
+<div align="center">
 
-# Gloss
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/banner-dark.svg" />
+  <source media="(prefers-color-scheme: light)" srcset="assets/banner-light.svg" />
+  <img src="assets/banner-dark.svg" alt="Gloss" width="720" />
+</picture>
 
-Gloss is a small macOS menu bar app that helps a Chinese-speaking engineer practise English
-spelling from their own Obsidian notes. It reads your vocabulary tables and daily mistake logs,
-quizzes you with spaced repetition, nudges you when cards are due, and fixes the English you
-select anywhere with one shortcut.
+**A macOS menu bar app that turns the English mistakes in your Obsidian notes into a daily spelling quiz.**
 
-It has no Dock icon. It never writes to your vault.
+Built for Chinese-speaking engineers who can *say* a word but keep *spelling* it wrong.
+It reads your own vocabulary table, schedules each word with **Leitner spaced repetition**,
+checks answers **without AI**, and fixes any English you select with one shortcut.
 
-![Gloss screenshot](docs/screenshot.png)
+[![macOS 14+](https://img.shields.io/badge/macOS-14%2B-111827?logo=apple)](#-install)
+[![Swift 5.9](https://img.shields.io/badge/Swift-5.9-F05138?logo=swift&logoColor=white)](Package.swift)
+[![SwiftUI + Liquid Glass](https://img.shields.io/badge/SwiftUI-Liquid%20Glass-7d70ff)](#-features)
+[![Tests](https://img.shields.io/badge/tests-61%20passing-34d399)](Tests/GlossCoreTests)
+[![No AI in the quiz](https://img.shields.io/badge/quiz-offline%2C%20no%20AI-22d3ee)](#-how-it-works)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-> Screenshot placeholder: run `make screenshot` and copy `shots/now.png` to `docs/screenshot.png`.
+[Install](#-install) · [Features](#-features) · [How it works](#-how-it-works) · [Vault format](#-vault-format) · [Shortcuts](#%EF%B8%8F-shortcuts) · [Build](#-build) · [Release](#-release) · [License](#-license)
 
-## Features
+</div>
 
-- **Overview menu** – click the icon for "English Health", tiles for due cards, 7-day accuracy, streak,
-  Leitner boxes, this week's mistakes and Fix my English, plus today's recommendation. "Start Quiz" opens
-  the quiz in the same menu.
-- **One window** – the Gloss window has a sidebar with Overview, Quiz, Stats, Fix My English (type or paste
-  text) and Settings (⌘1–5). The menu bar popover is the quick version; everything else opens in this window.
-- **Finding Gloss** – it has no Dock icon. Click the book icon in the menu bar, press ⌃⌥G from anywhere
-  (configurable), or open Gloss.app again: each shows the overview. The first launch shows it with a short
-  "where to find me" note.
-- **Menu bar badge** – the `character.book.closed` icon shows how many cards are due now.
-- **Spelling quiz** – a card shows the Chinese meaning, the first letter and the letter count,
-  for example `容量 → c_______ (8)`. Type the word and press Enter. Case and extra spaces are ignored.
-  A right answer shows a green check and moves on. A wrong answer shows the right spelling with the
-  wrong letters marked, your attempt, and your memory hint; the card comes back later in the round.
-- **Spaced repetition** – Leitner boxes 1–5 with intervals of 10 minutes, 1 day, 3 days, 7 days and
-  21 days. New cards come in order of how often you got them wrong. A card you answered correctly is
-  not shown again the same day.
-- **Extra practice** – after the day's reviews: Hardest 10, Random 10, Today's words, or Learn 10 new.
-  Practice rounds never change your review schedule.
-- **Nudges** – a notification every N minutes (default 60) while cards are due, except in quiet hours
-  (default 22:00–09:00). Click it to open the quiz.
-- **Fix my English** – select text in any app and press ⌃⌥E (configurable). Gloss copies the selection
-  (and puts your clipboard back), asks `claude -p` for a correction, and shows the fixed text, a shorter
-  version and each mistake with a Chinese explanation in a floating panel, with Copy buttons.
-- **Letter boxes and motion** – each card shows one box per letter that fills as you type. Tiles fade in,
-  numbers roll, a wrong answer shakes the card, a right one bursts into sparks. Turning on
-  *Reduce motion* in System Settings turns the motion off.
-- **Pronunciation** – a speaker button (⌘P) on every card says the word with the system English voice;
-  the word is also spoken after each answer. A setting can speak it when the card appears (dictation).
-  The fix panel has Listen buttons for the fixed and shorter sentences.
-- **Glass look** – a dark blue-violet theme with rounded glass cards and buttons: Apple's Liquid Glass on
-  macOS 26, a frosted material on macOS 14–15.
-- **Stats** – mistakes per category in the last 7 and 30 days, your 10 most repeated spelling words,
-  and quiz accuracy per day.
-- **Settings** – vault folder, decks, new cards per day, reminder interval, quiet hours, shortcut,
-  launch at login.
+---
 
-## Build
+<div align="center">
+  <img src="assets/window.webp" alt="The Gloss window: the overview with English Health, due cards, accuracy, streak and Leitner boxes; then the Quiz, Stats, Fix My English and Settings pages, with the sidebar highlight sliding between them" width="820" />
+</div>
 
-Needs macOS 14 or later and Xcode 15 or later (or the matching command line tools).
+## 📦 Install
 
-```sh
-swift build          # debug build
-swift test           # unit tests for GlossCore
-make app             # or ./scripts/bundle.sh → build/Gloss.app (ad-hoc signed)
-make run             # build and open the app
-make install         # copy it to /Applications
-```
-
-Developer options:
-
-```sh
-.build/debug/Gloss --screenshot shots/now.png      # draws a demo window off-screen, saves a PNG, exits
-.build/debug/Gloss --screenshot shots/p.png --page stats  # only one page of the main window
-.build/debug/Gloss --inspect-popover /tmp/popover.txt     # opens the menu popover invisibly, writes its structure
-.build/debug/Gloss --self-test shots/self-test.json # drives a demo quiz, writes results, exits
-```
-
-Both use a built-in deck of made-up words and never touch your vault or saved progress.
-
-## Install
-
-1. `make dmg` builds `build/Gloss.dmg`.
+1. Build the disk image with `make dmg` (needs Xcode 15+), or grab `Gloss.dmg` from [Releases](../../releases) when one is published.
 2. Open it and drag **Gloss** onto **Applications** (or run `make install`).
-3. Open Gloss from Applications. It lives in the menu bar (book icon); press ⌃⌥G to open its window.
+3. Open Gloss. It lives in the menu bar (the book icon with the number of cards due); press **⌃⌥G** to open its window.
 4. In Settings, turn on **Launch at login**, and allow **Accessibility** for Fix My English.
 
-Rebuilding changes an ad-hoc signature, so macOS may ask for the Accessibility permission again.
-Install once and keep using that copy to avoid this.
+> The first launch shows the overview with a short "Gloss lives in your menu bar" note.
+> There is no Dock icon.
 
-## Publish
+## ✨ Features
 
-A build signed ad-hoc runs on your own Mac. To share it with other people without Gatekeeper warnings:
+<table>
+<tr>
+<td width="42%" valign="middle">
 
-1. Join the Apple Developer Program and create a **Developer ID Application** certificate.
-2. Save notarization credentials once: `xcrun notarytool store-credentials gloss-notary --apple-id … --team-id …`.
-3. Build, sign, notarize and staple:
+### Spell it, box by box
 
-   ```sh
-   SIGN_ID="Developer ID Application: Your Name (TEAMID)" NOTARY_PROFILE=gloss-notary make dmg
-   ```
+The card shows the **Chinese meaning**, the first letter and one **box per letter**.
+Letters pop into the boxes as you type; **Enter** checks. A right answer bursts into
+sparks and the boxes turn mint one by one. A wrong one **shakes the card**, marks the
+letters you got wrong, shows your **memory hint** and brings the card back later in
+the round. The cursor stays in the answer field, so you never touch the mouse.
 
-4. Share `build/Gloss.dmg` (for example as a GitHub release asset).
+</td>
+<td><img src="assets/quiz.webp" alt="Quiz: type flumbrance letter by letter into the boxes, Enter, sparks and a green check; the next card slides in; type quintivel wrong, the card shakes and shows quintavel with the wrong letter in red and the hint; Enter to the next card" /></td>
+</tr>
+<tr>
+<td width="42%" valign="middle">
 
-Without a Developer ID you can still share the DMG; others must right-click Gloss → **Open** the first time.
+### An overview in the menu bar
 
-The icon is drawn in code (`Sources/Gloss/IconArt.swift`); `make icon` regenerates `Resources/AppIcon.icns`.
+Click the book icon for **English Health**, cards due now, **7-day accuracy**, your
+**streak**, the **Leitner boxes**, this week's top mistake categories and a
+**recommendation** for what to do next. Tiles fade in one after another, numbers roll
+up and bars grow.
 
-## Project layout
+</td>
+<td><img src="assets/overview.webp" alt="Overview: English Health Good, then tiles fade in one by one — Due now 4, Accuracy 83% with a bar chart, Streak 3 days, Leitner boxes, Mistakes 7 days, Fix my English — and Today's Recommendation: Practise 4 cards" /></td>
+</tr>
+<tr>
+<td width="42%" valign="middle">
 
-- `Sources/GlossCore` – parsing, scheduling, answer checking and stats (no UI). Unit-tested.
-- `Sources/Gloss` – the SwiftUI menu bar app.
-- `Tests/GlossCoreTests` – XCTest suites. Fixtures use made-up words only.
-- `MECHANICS.md` / `mechanics.json` – every number that shapes how Gloss behaves.
+### Keep practising after today's cards
 
-## How it works
+When the day's reviews are done, pick **Hardest 10**, **Random 10**, **Today's words**
+or **Learn 10 new**. Practice rounds never change your review schedule or your accuracy.
 
-- **Words** come from your vault's `單字.md` table (see below). Nothing is generated.
-- **Answers are checked without AI**: your typing must equal the correct spelling, ignoring case and extra
-  spaces. On a mistake, an edit-distance comparison marks the letters that differ.
-- **AI is used only by Fix My English**, which sends the selected or pasted text to the local `claude`
-  command. The quiz, schedule, stats and pronunciation (the macOS voice) work offline.
+</td>
+<td><img src="assets/practice.webp" alt="All caught up, with the Keep practising choices; Hardest 10 starts a practice round and the first word is typed into the letter boxes" /></td>
+</tr>
+<tr>
+<td width="42%" valign="middle">
 
-## Vault format
+### Fix My English — ⌃⌥E
 
-The vault folder defaults to `~/ob/英文` (`~` is expanded and symlinks are followed; iCloud Drive works).
-Gloss watches it with FSEvents and also checks it every 60 seconds.
+Select English in any app and press **⌃⌥E**. Gloss copies the selection (and puts your
+clipboard back), asks the local **`claude`** command, and shows a **fixed** version, a
+**shorter** one a native speaker would say, and each mistake with a Chinese explanation
+and its category. **Listen** reads it aloud; **Copy** puts it on the clipboard.
 
-### `單字.md`
+</td>
+<td><img src="assets/fix.webp" alt="Fix my English panel: copying the selection, asking Claude, then the fixed and shorter sentences slide in with Listen and Copy buttons, and the mistakes list: flumberance to flumbrance (拼字), want check to want to check (動詞形式)" /></td>
+</tr>
+</table>
 
-Markdown tables under level-2 headings. The table under the heading that starts with `## 拼字` is the
-spelling deck; the one under `## 用字` is the word-choice deck (off by default). Columns:
+**Also in the box**
+
+- 🔊 **Pronunciation** with the macOS English voice (⌘P on a card; spoken after each answer; optional dictation mode).
+- 📊 **Stats**: mistakes per category for 7 and 30 days, your 10 most repeated words, quiz accuracy per day.
+- 🔔 **Nudges**: a notification every 60 minutes while cards are due, outside quiet hours (22:00–09:00). Click it to open the quiz.
+- 🫧 **Dark blue-violet Liquid Glass** on macOS 26 (frosted material on 14–15), with motion that switches off under *Reduce motion*.
+- 👀 **Live reload**: the vault is watched with FSEvents and re-read every 60 seconds.
+
+## 🧠 How it works
+
+| | |
+|---|---|
+| **Where the words come from** | The table under `## 拼字` in your `單字.md` (and `## 用字` if you turn that deck on). Nothing is generated. |
+| **How an answer is checked** | **No AI.** Your typing must equal the correct spelling, ignoring case and extra spaces. On a mistake, an edit-distance comparison marks the letters that differ. |
+| **When AI is used** | Only by **Fix My English**, which sends the text you select or paste to the `claude` command (Claude Code) on your Mac. |
+| **What runs offline** | The quiz, the schedule, stats, reminders and pronunciation. Gloss **never writes to your vault**. |
+
+### Spaced repetition
+
+| Box | Next review | |
+|---|---|---|
+| 1 | 10 minutes | a wrong answer always goes back here |
+| 2 | 1 day | |
+| 3 | 3 days | |
+| 4 | 7 days | |
+| 5 | 21 days | |
+
+A right answer moves a card up one box, and a card you got right is not shown again the same day.
+New cards come in order of how often you misspelled them (10 a day, adjustable).
+Progress is saved in `~/Library/Application Support/Gloss/state.json`, keyed by the correct spelling.
+Every number is listed in [MECHANICS.md](MECHANICS.md).
+
+## 🗂 Vault format
+
+The vault folder defaults to `~/ob/英文` (`~` is expanded and symlinks are followed, so iCloud Drive works).
+
+**`單字.md`** — Markdown tables under level-2 headings:
 
 ```markdown
 ## 拼字（會唸、不會拼）
@@ -135,43 +141,86 @@ spelling deck; the one under `## 用字` is the word-choice deck (off by default
 | flumbrance | flumberance | 容量 | **flum** + brance | 4 |
 ```
 
-| Column | Meaning |
+| Column | Used as |
 |---|---|
-| 正確拼法 | correct spelling – the answer |
-| 你打的 | what you typed |
-| 中文 | Chinese meaning – shown on the card |
-| 記法 | memory hint – shown after a wrong answer |
-| 次數 | how many times – an integer, 1 when missing or unreadable |
+| 正確拼法 | the answer |
+| 你打的 | what you typed (shown in stats) |
+| 中文 | the question |
+| 記法 | the hint after a mistake |
+| 次數 | how often you missed it (1 when missing) |
 
-Cells may use `**bold**`, backticks and `?`; Gloss removes the Markdown for display and removes `?`
-from the answer. Rows with missing columns still load.
+Cells may use `**bold**`, backticks and `?`; Gloss strips the Markdown, and rows with missing columns still load.
 
-### `錯誤紀錄/YYYY-MM-DD.md`
-
-One mistake per line:
+**`錯誤紀錄/YYYY-MM-DD.md`** — one mistake per line, for the stats:
 
 ```markdown
 - `original` → `fix` — 中文說明 #類別
 ```
 
-Categories: `#冠詞 #動詞形式 #單複數 #拼字 #用字 #介系詞 #句型`. Other lines are ignored.
+Categories: `#冠詞 #動詞形式 #單複數 #拼字 #用字 #介系詞 #句型`.
 
-## Saved progress
+## ⌨️ Shortcuts
 
-`~/Library/Application Support/Gloss/state.json`, keyed by the correct spelling: box, due time,
-the last day answered correctly, review counts, and answers per day for the stats.
+| Keys | Does |
+|---|---|
+| **⌃⌥G** | open or hide the Gloss window (configurable) |
+| **⌃⌥E** | fix the selected English (configurable) |
+| **Enter** | check the answer / next card |
+| **⌘P** | hear the word |
+| **⌘1 – ⌘5** | Overview, Quiz, Stats, Fix My English, Settings |
+| **⌘[** | back to the overview in the menu |
 
-## Permissions
+## 🔐 Permissions
 
-- **Accessibility** – needed by Fix my English to send ⌘C to the front app. Gloss shows a button that
-  opens *System Settings → Privacy & Security → Accessibility*. An ad-hoc signed build gets a new
-  signature each time you rebuild, so you may need to switch the permission off and on again.
-- **Notifications** – asked on first launch; used for the nudges. They only work from `Gloss.app`
-  (not from `swift run`).
-- **Claude Code** – Fix my English runs the `claude` command line tool, found with
-  `/bin/zsh -lc 'command -v claude'`. If it is missing, or takes longer than 30 seconds, the panel says so.
-- **Launch at login** – uses `SMAppService`; works when Gloss runs from the `.app` bundle.
+- **Accessibility** — Fix My English sends ⌘C to the front app. Gloss shows a button that opens *System Settings → Privacy & Security → Accessibility*.
+- **Notifications** — for the nudges; asked on first launch.
+- **Claude Code** — Fix My English runs `claude`, found with `/bin/zsh -lc 'command -v claude'`. Missing or slower than 30 seconds, the panel says so.
 
-## License
+## 🛠 Build
 
-MIT – see [LICENSE](LICENSE).
+Needs macOS 14+ and Xcode 15+ (Swift 5.9).
+
+```sh
+swift build        # debug build
+swift test         # GlossCore unit tests
+make app           # build/Gloss.app
+make install       # build, sign and copy to /Applications
+make dmg           # build/Gloss.dmg
+make demos         # re-record the animated pictures in assets/ (needs ffmpeg and webp)
+make icon          # redraw Resources/AppIcon.icns from Sources/Gloss/IconArt.swift
+```
+
+Developer options:
+
+```sh
+.build/debug/Gloss --screenshot shots/now.png            # draws a demo window off-screen, saves a PNG
+.build/debug/Gloss --screenshot shots/p.png --page stats # one page of the main window
+.build/debug/Gloss --self-test shots/self-test.json      # drives a demo quiz and checks each step
+.build/debug/Gloss --record /tmp/rec --scene quiz        # frames for the README animations
+```
+
+All of them use a built-in deck of **made-up words** and never touch your vault or saved progress.
+
+| Folder | What |
+|---|---|
+| `Sources/GlossCore` | parsing, Leitner scheduling, answer checking, stats, practice — no UI, unit-tested |
+| `Sources/Gloss` | the SwiftUI app: menu bar, window, quiz, glass, motion, hotkeys, `claude` runner |
+| `Tests/GlossCoreTests` | XCTest suites with made-up fixtures |
+| `assets/` | README banner and animations |
+
+## 🚀 Release
+
+`make dmg` and `make install` sign with the first **Developer ID Application** certificate in your
+keychain (hardened runtime); everyday `make app` builds are ad-hoc. The first time, macOS asks to let
+`codesign` use the key — enter your login password and choose **Always Allow**.
+
+To notarize, save credentials once and pass the profile name:
+
+```sh
+xcrun notarytool store-credentials gloss-notary --apple-id you@example.com --team-id TEAMID
+NOTARY_PROFILE=gloss-notary make dmg
+```
+
+## 📄 License
+
+[MIT](LICENSE)

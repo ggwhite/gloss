@@ -89,7 +89,7 @@ struct SettingsView: View {
                 Toggle("Launch at login", isOn: $launchAtLogin)
                     .onChange(of: launchAtLogin) { _, on in setLaunchAtLogin(on) }
                 if let loginError { Text(loginError).font(.caption).foregroundStyle(Theme.warn) }
-                Text("Progress: \(StateStore.defaultURL.path)").font(.caption).foregroundStyle(.secondary)
+                Text("Progress: ~/Library/Application Support/Gloss/state.json").font(.caption).foregroundStyle(.secondary)
                     .textSelection(.enabled)
             }
         }

@@ -7,7 +7,9 @@ func value(after flag: String) -> String? {
     return arguments[i + 1]
 }
 
-if let path = value(after: "--render-icon") {
+if let folder = value(after: "--record"), let scene = value(after: "--scene") {
+    MainActor.assumeIsolated { Recorder.run(folder: folder, scene: scene) }
+} else if let path = value(after: "--render-icon") {
     exit(MainActor.assumeIsolated { IconRenderer.run(to: path) })
 } else if let path = value(after: "--screenshot") {
     MainActor.assumeIsolated { Harness.runScreenshot(to: path) }

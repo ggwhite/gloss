@@ -11,10 +11,15 @@ enum Harness {
     /// Harness windows are drawn far off-screen, so checks never flash a window on the person's screen.
     static let offscreen = NSPoint(x: -30_000, y: -30_000)
 
+    static let demoVaultPath = "/Users/you/Notes/英文"
+
     static func demoSettings() -> AppSettings {
         let name = "app.gloss.harness"
         UserDefaults().removePersistentDomain(forName: name)
-        return AppSettings(defaults: UserDefaults(suiteName: name)!)
+        let settings = AppSettings(defaults: UserDefaults(suiteName: name)!)
+        // A neutral path for pictures and recordings: never show the person's real vault location.
+        settings.vaultPath = demoVaultPath
+        return settings
     }
 
     /// Today at 10:00, outside the default quiet hours.

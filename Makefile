@@ -1,4 +1,4 @@
-.PHONY: build test app run install dmg icon clean screenshot selftest
+.PHONY: build test app run install dmg icon demos clean screenshot selftest
 
 build:
 	swift build
@@ -18,9 +18,15 @@ icon:
 dmg:
 	./scripts/dmg.sh
 
-install: app
+demos:
+	./scripts/record-demos.sh
+
+install:
+	RELEASE=1 ./scripts/bundle.sh
+	-osascript -e 'quit app "Gloss"'
 	rm -rf /Applications/Gloss.app
-	cp -R build/Gloss.app /Applications/Gloss.app
+	ditto build/Gloss.app /Applications/Gloss.app
+	open /Applications/Gloss.app
 
 screenshot: build
 	.build/debug/Gloss --screenshot shots/now.png
