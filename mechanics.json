@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "values": [
+    {"name": "leitner boxes", "group": "scheduling", "value": 5, "source": "request"},
+    {"name": "box 1 interval", "group": "scheduling", "value": 10, "unit": "min", "source": "request"},
+    {"name": "box 2 interval", "group": "scheduling", "value": 1, "unit": "day", "source": "request"},
+    {"name": "box 3 interval", "group": "scheduling", "value": 3, "unit": "day", "source": "request"},
+    {"name": "box 4 interval", "group": "scheduling", "value": 7, "unit": "day", "source": "request"},
+    {"name": "box 5 interval", "group": "scheduling", "value": 21, "unit": "day", "source": "request"},
+    {"name": "same-day rule after correct", "group": "scheduling", "value": true, "source": "request"},
+    {"name": "new-card order", "group": "scheduling", "value": "count, higher first", "source": "request"},
+    {"name": "wrong answer box", "group": "scheduling", "value": 1, "estimated": true},
+    {"name": "new cards per day", "group": "scheduling", "value": 10, "estimated": true},
+    {"name": "wrong card requeue gap", "group": "quiz", "value": 3, "unit": "cards", "estimated": true},
+    {"name": "answer check", "group": "quiz", "value": "trim + case-insensitive", "source": "request"},
+    {"name": "green check pause", "group": "quiz", "value": 0.7, "unit": "s", "estimated": true},
+    {"name": "check key", "group": "controls", "value": "Enter", "source": "request"},
+    {"name": "fix shortcut", "group": "controls", "value": "ctrl+option+E", "source": "request"},
+    {"name": "nudge interval", "group": "reminders", "value": 60, "unit": "min", "source": "request"},
+    {"name": "quiet hours start", "group": "reminders", "value": "22:00", "source": "request"},
+    {"name": "quiet hours end", "group": "reminders", "value": "09:00", "source": "request"},
+    {"name": "vault poll interval", "group": "reminders", "value": 60, "unit": "s", "source": "request"},
+    {"name": "fsevents latency", "group": "reminders", "value": 1, "unit": "s", "estimated": true},
+    {"name": "claude timeout", "group": "fix", "value": 30, "unit": "s", "source": "request"},
+    {"name": "copy wait", "group": "fix", "value": 0.6, "unit": "s", "estimated": true},
+    {"name": "category windows", "group": "stats", "value": "7 and 30 days", "source": "request"},
+    {"name": "top repeated words", "group": "stats", "value": 10, "source": "request"},
+    {"name": "accuracy chart days", "group": "stats", "value": 14, "estimated": true}
+  ]
+}
