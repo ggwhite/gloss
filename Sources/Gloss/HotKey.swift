@@ -8,8 +8,10 @@ struct HotKeyCombo: Codable, Equatable {
     /// The key's label, e.g. "E".
     var key: String
 
-    /// ⌃⌥E
+    /// ⌃⌥E: fix my English.
     static let `default` = HotKeyCombo(keyCode: UInt32(kVK_ANSI_E), modifiers: UInt32(controlKey | optionKey), key: "E")
+    /// ⌃⌥G: open the Gloss overview.
+    static let openDefault = HotKeyCombo(keyCode: UInt32(kVK_ANSI_G), modifiers: UInt32(controlKey | optionKey), key: "G")
 
     var display: String {
         var s = ""
@@ -42,29 +44,43 @@ struct HotKeyCombo: Codable, Equatable {
     }
 }
 
-/// Registers one global hotkey with Carbon (no Accessibility permission needed for this part).
+/// Registers global hotkeys with Carbon (no Accessibility permission needed for this part).
 final class HotKeyCenter {
     static let shared = HotKeyCenter()
-    private var ref: EventHotKeyRef?
-    private var handlerInstalled = false
-    var onPress: (() -> Void)?
 
-    func register(_ combo: HotKeyCombo) {
+    enum Slot: UInt32 {
+        case fixEnglish = 1
+        case openMenu = 2
+    }
+
+    private var refs: [UInt32: EventHotKeyRef] = [:]
+    private var handlers: [UInt32: () -> Void] = [:]
+    private var handlerInstalled = false
+
+    func register(_ slot: Slot, _ combo: HotKeyCombo, handler: @escaping () -> Void) {
         installHandler()
-        if let ref { UnregisterEventHotKey(ref) }
-        ref = nil
-        let id = EventHotKeyID(signature: OSType(0x474C5353), id: 1) // 'GLSS'
+        if let old = refs[slot.rawValue] { UnregisterEventHotKey(old) }
+        refs[slot.rawValue] = nil
+        handlers[slot.rawValue] = handler
+        let id = EventHotKeyID(signature: OSType(0x474C5353), id: slot.rawValue) // 'GLSS'
         var newRef: EventHotKeyRef?
         let status = RegisterEventHotKey(combo.keyCode, combo.modifiers, id, GetApplicationEventTarget(), 0, &newRef)
-        if status == noErr { ref = newRef } else { NSLog("Gloss: hotkey register failed \(status)") }
+        if status == noErr { refs[slot.rawValue] = newRef } else { NSLog("Gloss: hotkey \(slot) register failed \(status)") }
     }
+
+    fileprivate func fire(_ id: UInt32) { handlers[id]?() }
 
     private func installHandler() {
         guard !handlerInstalled else { return }
         handlerInstalled = true
         var spec = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
-        InstallEventHandler(GetApplicationEventTarget(), { _, _, _ -> OSStatus in
-            DispatchQueue.main.async { HotKeyCenter.shared.onPress?() }
+        InstallEventHandler(GetApplicationEventTarget(), { _, event, _ -> OSStatus in
+            var hk = EventHotKeyID()
+            let err = GetEventParameter(event, EventParamName(kEventParamDirectObject), EventParamType(typeEventHotKeyID),
+                                        nil, MemoryLayout<EventHotKeyID>.size, nil, &hk)
+            guard err == noErr else { return err }
+            let id = hk.id
+            DispatchQueue.main.async { HotKeyCenter.shared.fire(id) }
             return noErr
         }, 1, &spec, nil, nil)
     }

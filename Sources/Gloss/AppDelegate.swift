@@ -13,27 +13,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let router = Router()
     let notifier = Notifier()
     let fix = FixController()
+    let nav = Navigator()
     private lazy var watcher = VaultWatcher { [weak self] in self?.model.reloadVault() }
     private var timer: Timer?
-    private var windows: [String: NSWindow] = [:]
     private var bag: Set<AnyCancellable> = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
-        router.showStats = { [weak self] in self?.showWindow("stats", title: "Gloss Stats") { StatsView() } }
-        router.showSettings = { [weak self] in
-            guard let self else { return }
-            self.showWindow("settings", title: "Gloss Settings") { SettingsView(settings: self.settings) }
-        }
-        router.showQuizWindow = { [weak self] in self?.showQuizWindow() }
+        NSApp.appearance = Theme.darkAppearance
+        router.showStats = { [weak self] in self?.open(.stats) }
+        router.showSettings = { [weak self] in self?.open(.settings) }
+        router.showQuizWindow = { [weak self] in self?.open(.quiz) }
         router.fixEnglish = { [weak self] in self?.fix.trigger() }
         router.hotKeyLabel = { [weak self] in self?.settings.hotKey.display ?? "" }
+        router.openHotKeyLabel = { [weak self] in self?.settings.openHotKey.display ?? "" }
+        router.showOverview = { [weak self] in self?.open(.overview) }
 
-        notifier.onOpen = { [weak self] in self?.showQuizWindow() }
+        notifier.onOpen = { [weak self] in self?.open(.quiz) }
         notifier.setUp()
 
-        HotKeyCenter.shared.onPress = { [weak self] in self?.fix.trigger() }
-        HotKeyCenter.shared.register(settings.hotKey)
+        settings.$hotKey.removeDuplicates()
+            .sink { combo in HotKeyCenter.shared.register(.fixEnglish, combo) { [weak self] in self?.fix.trigger() } }
+            .store(in: &bag)
+        settings.$openHotKey.removeDuplicates()
+            .sink { combo in HotKeyCenter.shared.register(.openMenu, combo) { [weak self] in self?.toggleOverview() } }
+            .store(in: &bag)
 
         watcher.watch(Vault.resolve(settings.vaultPath))
         settings.$vaultPath.removeDuplicates().dropFirst()
@@ -45,6 +49,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Task { @MainActor in self?.tickNow() }
         }
         tickNow()
+
+        // First launch: show the overview once, with the "where to find me" note.
+        if PopoverInspector.outputPath != nil {
+            PopoverInspector.start()
+        } else if !settings.welcomeDone {
+            open(.overview)
+        }
+    }
+
+    /// Opening Gloss.app again while it runs shows the overview (there is no Dock icon to click).
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        showMain()
+        return false
+    }
+
+    /// Shows the one main window on a page. The menu, shortcuts, notifications and reopening all use it.
+    func open(_ page: Page) {
+        nav.page = page
+        showMain()
+    }
+
+    private func toggleOverview() {
+        if let w = mainWindow, w.isVisible, w.isKeyWindow { w.orderOut(nil) } else { open(.overview) }
     }
 
     /// Reloads the vault when it changed (polling fallback), updates the badge, and sends a nudge when it is time.
@@ -60,23 +87,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func showQuizWindow() {
-        showWindow("quiz", title: "Gloss Quiz") { QuizView() }
-    }
+    private var mainWindow: NSWindow?
 
-    private func showWindow<V: View>(_ id: String, title: String, @ViewBuilder content: () -> V) {
+    /// Creates the main window once; later calls bring it to the front.
+    func showMain() {
         let window: NSWindow
-        if let w = windows[id] {
+        if let w = mainWindow {
             window = w
         } else {
-            let root = content().environmentObject(model).environmentObject(router)
+            let root = MainWindowView()
+                .environmentObject(model)
+                .environmentObject(router)
+                .environmentObject(nav)
+                .tint(Theme.accent)
+                .background(AnimatedWash().ignoresSafeArea())
+                .background(WindowGlassBackground(material: .hudWindow).ignoresSafeArea())
             let host = NSHostingController(rootView: root)
+            host.sizingOptions = [.minSize]
             window = NSWindow(contentViewController: host)
-            window.title = title
-            window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
+            window.title = "Gloss"
+            window.setContentSize(NSSize(width: 1000, height: 760))
+            window.setFrameAutosaveName("GlossMainWindow")
+            window.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
+            window.titlebarAppearsTransparent = true
+            window.titleVisibility = .hidden
+            window.isOpaque = false
+            window.backgroundColor = .clear
+            window.isMovableByWindowBackground = true
+            window.appearance = Theme.darkAppearance
             window.isReleasedWhenClosed = false
-            window.center()
-            windows[id] = window
+            if !window.setFrameUsingName("GlossMainWindow") { window.center() }
+            mainWindow = window
         }
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)

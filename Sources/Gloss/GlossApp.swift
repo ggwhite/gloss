@@ -5,17 +5,15 @@ struct GlossApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            QuizView()
+            PopoverRoot()
                 .environmentObject(delegate.model)
                 .environmentObject(delegate.router)
+                .popoverChrome()
+                .preferredColorScheme(.dark)
+                .tint(Theme.accent)
         } label: {
             MenuBarLabel(model: delegate.model)
         }
         .menuBarExtraStyle(.window)
-
-        Settings {
-            SettingsView(settings: delegate.settings)
-                .environmentObject(delegate.model)
-        }
     }
 }

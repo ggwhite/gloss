@@ -1,30 +1,434 @@
 {
   "version": 1,
   "values": [
-    {"name": "leitner boxes", "group": "scheduling", "value": 5, "source": "request"},
-    {"name": "box 1 interval", "group": "scheduling", "value": 10, "unit": "min", "source": "request"},
-    {"name": "box 2 interval", "group": "scheduling", "value": 1, "unit": "day", "source": "request"},
-    {"name": "box 3 interval", "group": "scheduling", "value": 3, "unit": "day", "source": "request"},
-    {"name": "box 4 interval", "group": "scheduling", "value": 7, "unit": "day", "source": "request"},
-    {"name": "box 5 interval", "group": "scheduling", "value": 21, "unit": "day", "source": "request"},
-    {"name": "same-day rule after correct", "group": "scheduling", "value": true, "source": "request"},
-    {"name": "new-card order", "group": "scheduling", "value": "count, higher first", "source": "request"},
-    {"name": "wrong answer box", "group": "scheduling", "value": 1, "estimated": true},
-    {"name": "new cards per day", "group": "scheduling", "value": 10, "estimated": true},
-    {"name": "wrong card requeue gap", "group": "quiz", "value": 3, "unit": "cards", "estimated": true},
-    {"name": "answer check", "group": "quiz", "value": "trim + case-insensitive", "source": "request"},
-    {"name": "green check pause", "group": "quiz", "value": 0.7, "unit": "s", "estimated": true},
-    {"name": "check key", "group": "controls", "value": "Enter", "source": "request"},
-    {"name": "fix shortcut", "group": "controls", "value": "ctrl+option+E", "source": "request"},
-    {"name": "nudge interval", "group": "reminders", "value": 60, "unit": "min", "source": "request"},
-    {"name": "quiet hours start", "group": "reminders", "value": "22:00", "source": "request"},
-    {"name": "quiet hours end", "group": "reminders", "value": "09:00", "source": "request"},
-    {"name": "vault poll interval", "group": "reminders", "value": 60, "unit": "s", "source": "request"},
-    {"name": "fsevents latency", "group": "reminders", "value": 1, "unit": "s", "estimated": true},
-    {"name": "claude timeout", "group": "fix", "value": 30, "unit": "s", "source": "request"},
-    {"name": "copy wait", "group": "fix", "value": 0.6, "unit": "s", "estimated": true},
-    {"name": "category windows", "group": "stats", "value": "7 and 30 days", "source": "request"},
-    {"name": "top repeated words", "group": "stats", "value": 10, "source": "request"},
-    {"name": "accuracy chart days", "group": "stats", "value": 14, "estimated": true}
+    {
+      "name": "leitner boxes",
+      "group": "scheduling",
+      "value": 5,
+      "source": "request"
+    },
+    {
+      "name": "box 1 interval",
+      "group": "scheduling",
+      "value": 10,
+      "unit": "min",
+      "source": "request"
+    },
+    {
+      "name": "box 2 interval",
+      "group": "scheduling",
+      "value": 1,
+      "unit": "day",
+      "source": "request"
+    },
+    {
+      "name": "box 3 interval",
+      "group": "scheduling",
+      "value": 3,
+      "unit": "day",
+      "source": "request"
+    },
+    {
+      "name": "box 4 interval",
+      "group": "scheduling",
+      "value": 7,
+      "unit": "day",
+      "source": "request"
+    },
+    {
+      "name": "box 5 interval",
+      "group": "scheduling",
+      "value": 21,
+      "unit": "day",
+      "source": "request"
+    },
+    {
+      "name": "same-day rule after correct",
+      "group": "scheduling",
+      "value": true,
+      "source": "request"
+    },
+    {
+      "name": "new-card order",
+      "group": "scheduling",
+      "value": "count, higher first",
+      "source": "request"
+    },
+    {
+      "name": "wrong answer box",
+      "group": "scheduling",
+      "value": 1,
+      "estimated": true
+    },
+    {
+      "name": "new cards per day",
+      "group": "scheduling",
+      "value": 10,
+      "estimated": true
+    },
+    {
+      "name": "wrong card requeue gap",
+      "group": "quiz",
+      "value": 3,
+      "unit": "cards",
+      "estimated": true
+    },
+    {
+      "name": "answer check",
+      "group": "quiz",
+      "value": "trim + case-insensitive",
+      "source": "request"
+    },
+    {
+      "name": "green check pause",
+      "group": "quiz",
+      "value": 0.7,
+      "unit": "s",
+      "estimated": true
+    },
+    {
+      "name": "check key",
+      "group": "controls",
+      "value": "Enter",
+      "source": "request"
+    },
+    {
+      "name": "fix shortcut",
+      "group": "controls",
+      "value": "ctrl+option+E",
+      "source": "request"
+    },
+    {
+      "name": "nudge interval",
+      "group": "reminders",
+      "value": 60,
+      "unit": "min",
+      "source": "request"
+    },
+    {
+      "name": "quiet hours start",
+      "group": "reminders",
+      "value": "22:00",
+      "source": "request"
+    },
+    {
+      "name": "quiet hours end",
+      "group": "reminders",
+      "value": "09:00",
+      "source": "request"
+    },
+    {
+      "name": "vault poll interval",
+      "group": "reminders",
+      "value": 60,
+      "unit": "s",
+      "source": "request"
+    },
+    {
+      "name": "fsevents latency",
+      "group": "reminders",
+      "value": 1,
+      "unit": "s",
+      "estimated": true
+    },
+    {
+      "name": "claude timeout",
+      "group": "fix",
+      "value": 30,
+      "unit": "s",
+      "source": "request"
+    },
+    {
+      "name": "copy wait",
+      "group": "fix",
+      "value": 0.6,
+      "unit": "s",
+      "estimated": true
+    },
+    {
+      "name": "category windows",
+      "group": "stats",
+      "value": "7 and 30 days",
+      "source": "request"
+    },
+    {
+      "name": "top repeated words",
+      "group": "stats",
+      "value": 10,
+      "source": "request"
+    },
+    {
+      "name": "accuracy chart days",
+      "group": "stats",
+      "value": 14,
+      "estimated": true
+    },
+    {
+      "name": "speak word after answer",
+      "group": "pronunciation",
+      "value": true,
+      "source": "person's follow-up request (也加上發音); default estimated"
+    },
+    {
+      "name": "speak word when card appears",
+      "group": "pronunciation",
+      "value": false,
+      "estimated": true
+    },
+    {
+      "name": "pronounce shortcut",
+      "group": "controls",
+      "value": "cmd+P",
+      "estimated": true
+    },
+    {
+      "name": "speech voice",
+      "group": "pronunciation",
+      "value": "system en-US",
+      "estimated": true
+    },
+    {
+      "name": "speech rate",
+      "group": "pronunciation",
+      "value": 0.85,
+      "unit": "x default",
+      "estimated": true
+    },
+    {
+      "name": "card corner radius",
+      "group": "look",
+      "value": 30,
+      "unit": "pt",
+      "source": "person's follow-up request (rounded borders); size estimated"
+    },
+    {
+      "name": "glass style",
+      "group": "look",
+      "value": "Liquid Glass on macOS 26, frosted material on 14-15",
+      "source": "person's follow-up request (Apple glass look)"
+    },
+    {
+      "name": "color scheme",
+      "group": "look",
+      "value": "dark",
+      "source": "person's follow-up request (色調用暗色)"
+    },
+    {
+      "name": "accent color",
+      "group": "look",
+      "value": "#7D70FF blue-violet",
+      "source": "person's follow-up request (藍紫); exact shade estimated"
+    },
+    {
+      "name": "background tones",
+      "group": "look",
+      "value": "navy #0D0F2B to plum #24124A",
+      "source": "person's follow-up request (藍紫); exact shade estimated"
+    },
+    {
+      "name": "right-answer color",
+      "group": "look",
+      "value": "#61EBD6 mint",
+      "estimated": true
+    },
+    {
+      "name": "wrong-answer color",
+      "group": "look",
+      "value": "#FF669E rose",
+      "estimated": true
+    },
+    {
+      "name": "menu first screen",
+      "group": "overview",
+      "value": "overview (quiz opens from Start Quiz)",
+      "source": "person's follow-up request (richer menu, like their reference picture)"
+    },
+    {
+      "name": "health: answers needed in 7 days",
+      "group": "overview",
+      "value": 5,
+      "estimated": true
+    },
+    {
+      "name": "health: Good accuracy",
+      "group": "overview",
+      "value": 0.8,
+      "estimated": true
+    },
+    {
+      "name": "health: Fair accuracy",
+      "group": "overview",
+      "value": 0.6,
+      "estimated": true
+    },
+    {
+      "name": "health: most due cards for Good",
+      "group": "overview",
+      "value": 20,
+      "estimated": true
+    },
+    {
+      "name": "recommendation order",
+      "group": "overview",
+      "value": "due cards, then worst 7-day category, then Fix my English",
+      "estimated": true
+    },
+    {
+      "name": "back to overview shortcut",
+      "group": "controls",
+      "value": "cmd+[",
+      "estimated": true
+    },
+    {
+      "name": "open Gloss shortcut",
+      "group": "controls",
+      "value": "ctrl+option+G",
+      "source": "person's follow-up (could not find how to open it); key estimated"
+    },
+    {
+      "name": "overview on first launch and on reopening Gloss.app",
+      "group": "overview",
+      "value": true,
+      "source": "person's follow-up (could not find how to open it)"
+    },
+    {
+      "name": "harness windows drawn off-screen",
+      "group": "look",
+      "value": true,
+      "source": "person's follow-up (a screen kept flashing)"
+    },
+    {
+      "name": "app windows",
+      "group": "look",
+      "value": "one main window with sidebar pages (Overview, Quiz, Stats, Fix My English, Settings)",
+      "source": "person's follow-up (too many windows)"
+    },
+    {
+      "name": "main window size",
+      "group": "look",
+      "value": "1000x760 (min 900x640), position remembered",
+      "estimated": true
+    },
+    {
+      "name": "page shortcuts",
+      "group": "controls",
+      "value": "cmd+1..5",
+      "estimated": true
+    },
+    {
+      "name": "menu popover corner radius",
+      "group": "look",
+      "value": 22,
+      "unit": "pt",
+      "source": "person's follow-up (square popover corners looked broken); size estimated"
+    },
+    {
+      "name": "app icon",
+      "group": "look",
+      "value": "blue-violet rounded tile, two frosted flashcards, 'Aa' with spelling blanks and a mint check",
+      "source": "person's follow-up (prettier app icon)"
+    },
+    {
+      "name": "distribution",
+      "group": "packaging",
+      "value": "make dmg (ad-hoc); Developer ID + notarization when SIGN_ID and NOTARY_PROFILE are set",
+      "source": "person's follow-up (install or publish?)"
+    },
+    {
+      "name": "letter boxes",
+      "group": "quiz",
+      "value": "one box per letter, filled live while typing; first letter shown as a hint; +N for extra letters",
+      "source": "person's follow-up (UI polish); design estimated"
+    },
+    {
+      "name": "letter box max size",
+      "group": "quiz",
+      "value": 30,
+      "unit": "pt",
+      "estimated": true
+    },
+    {
+      "name": "tile fade-in stagger",
+      "group": "motion",
+      "value": 0.06,
+      "unit": "s",
+      "estimated": true
+    },
+    {
+      "name": "spring response",
+      "group": "motion",
+      "value": 0.42,
+      "unit": "s",
+      "estimated": true
+    },
+    {
+      "name": "wrong-answer shake",
+      "group": "motion",
+      "value": "3 shakes, 9 pt, 0.45 s",
+      "estimated": true
+    },
+    {
+      "name": "right-answer spark burst",
+      "group": "motion",
+      "value": "16 sparks, 0.85 s",
+      "estimated": true
+    },
+    {
+      "name": "background drift loop",
+      "group": "motion",
+      "value": 24,
+      "unit": "s",
+      "estimated": true
+    },
+    {
+      "name": "respects Reduce Motion",
+      "group": "motion",
+      "value": true,
+      "source": "person's follow-up (add motion); accessibility default"
+    },
+    {
+      "name": "extra practice after reviews",
+      "group": "practice",
+      "value": "Hardest 10, Random 10, Today's words, Learn 10 new",
+      "source": "person's follow-up (can I keep practising?)"
+    },
+    {
+      "name": "practice round size",
+      "group": "practice",
+      "value": 10,
+      "unit": "cards",
+      "estimated": true
+    },
+    {
+      "name": "practice changes schedule",
+      "group": "practice",
+      "value": false,
+      "estimated": true
+    },
+    {
+      "name": "practice counts for accuracy",
+      "group": "practice",
+      "value": false,
+      "estimated": true
+    },
+    {
+      "name": "learn more new cards",
+      "group": "practice",
+      "value": 10,
+      "unit": "cards per click, added to today's limit",
+      "estimated": true
+    },
+    {
+      "name": "cursor stays in the answer field",
+      "group": "controls",
+      "value": true,
+      "source": "person's follow-up (had to click the field for each card)"
+    },
+    {
+      "name": "typing during the green check",
+      "group": "controls",
+      "value": "starts the next card at once, keeping the letters",
+      "estimated": true
+    }
   ]
 }

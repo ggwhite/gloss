@@ -8,4 +8,6 @@ final class Router: ObservableObject {
     var fixEnglish: () -> Void = {}
     var quit: () -> Void = { NSApp.terminate(nil) }
     var hotKeyLabel: () -> String = { HotKeyCombo.default.display }
+    var openHotKeyLabel: () -> String = { HotKeyCombo.openDefault.display }
+    var showOverview: () -> Void = {}
 }

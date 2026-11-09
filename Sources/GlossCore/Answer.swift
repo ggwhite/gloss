@@ -95,3 +95,43 @@ public enum CardPrompt {
         "\(entry.meaning) → \(mask(entry.word)) (\(letterCount(entry.word)))"
     }
 }
+
+/// One box of the letter-box row under a card's meaning.
+public enum LetterSlot: Equatable, Sendable {
+    /// The first letter, shown before anything is typed.
+    case hint(Character)
+    /// A letter the person typed into this box.
+    case typed(Character)
+    /// A box still to fill.
+    case empty
+    /// A space, hyphen or apostrophe in the word (not a box).
+    case separator(Character)
+}
+
+extension CardPrompt {
+    /// Boxes for each letter of `word`, filled in order with the letters typed so far (spaces and
+    /// punctuation in the typing are skipped). `overflow` counts typed letters beyond the last box.
+    /// Typing never shows whether a letter is right; that is only shown after Enter.
+    public static func slots(for word: String, typed: String) -> (slots: [LetterSlot], overflow: Int) {
+        let letters = Array(typed.lowercased().filter { $0.isLetter || $0.isNumber })
+        var used = 0
+        var slots: [LetterSlot] = []
+        var first = true
+        for ch in word {
+            guard ch.isLetter || ch.isNumber else {
+                slots.append(.separator(ch))
+                continue
+            }
+            if used < letters.count {
+                slots.append(.typed(letters[used]))
+                used += 1
+            } else if first && letters.isEmpty {
+                slots.append(.hint(ch))
+            } else {
+                slots.append(.empty)
+            }
+            first = false
+        }
+        return (slots, max(letters.count - used, 0))
+    }
+}

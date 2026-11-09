@@ -1,4 +1,4 @@
-.PHONY: build test app run install clean screenshot selftest
+.PHONY: build test app run install dmg icon clean screenshot selftest
 
 build:
 	swift build
@@ -11,6 +11,12 @@ app:
 
 run: app
 	open build/Gloss.app
+
+icon:
+	./scripts/make-icon.sh
+
+dmg:
+	./scripts/dmg.sh
 
 install: app
 	rm -rf /Applications/Gloss.app

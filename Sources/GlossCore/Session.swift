@@ -20,9 +20,13 @@ public final class QuizSession {
     public private(set) var answeredCount = 0
     public private(set) var correctCount = 0
     public let scheduler: LeitnerScheduler
+    /// Extra practice: answers are checked and counted, but the schedule (boxes, due times) never changes.
+    public let isPractice: Bool
     private let now: () -> Date
 
-    public init(cards: [VocabEntry], state: GlossState, scheduler: LeitnerScheduler, now: @escaping () -> Date) {
+    public init(cards: [VocabEntry], state: GlossState, scheduler: LeitnerScheduler, practice: Bool = false,
+                now: @escaping () -> Date) {
+        self.isPractice = practice
         self.queue = cards
         self.state = state
         self.scheduler = scheduler
@@ -41,15 +45,18 @@ public final class QuizSession {
         let t = now()
         let today = Day(t, calendar: scheduler.calendar)
         let ok = AnswerChecker.isCorrect(expected: entry.word, typed: typed)
-        let wasNew = state.cards[entry.word] == nil
-
-        state.cards[entry.word] = scheduler.apply(
-            correct: ok, to: state.cards[entry.word], now: t, lapsedThisSession: lapsed.contains(entry.word))
-
         var day = state.stats(for: today)
-        day.answered += 1
-        if ok { day.correct += 1 }
-        if wasNew { day.newIntroduced += 1 }
+        if isPractice {
+            day.practiced += 1
+            if ok { day.practiceCorrect += 1 }
+        } else {
+            let wasNew = state.cards[entry.word] == nil
+            state.cards[entry.word] = scheduler.apply(
+                correct: ok, to: state.cards[entry.word], now: t, lapsedThisSession: lapsed.contains(entry.word))
+            day.answered += 1
+            if ok { day.correct += 1 }
+            if wasNew { day.newIntroduced += 1 }
+        }
         state.daily[today.iso] = day
         answeredCount += 1
         if ok { correctCount += 1 }

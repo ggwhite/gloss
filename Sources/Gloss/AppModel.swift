@@ -17,11 +17,22 @@ final class AppModel: ObservableObject {
     @Published private(set) var dueCount = 0
     @Published private(set) var current: VocabEntry?
     @Published var phase: Phase = .asking
-    @Published var answer = ""
+    @Published var answer = "" {
+        didSet {
+            // Typing during the green-check pause starts the next card at once, keeping what was typed.
+            if case .correct = phase, !answer.isEmpty, oldValue.isEmpty { next(keepAnswer: true) }
+        }
+    }
     @Published private(set) var sessionRemaining = 0
     @Published private(set) var sessionAnswered = 0
     @Published private(set) var sessionCorrect = 0
     @Published private(set) var lastSaveError: String?
+    /// The menu shows the overview, or the quiz after "Start Quiz".
+    @Published var showingQuiz = false
+    /// Changes each time a new card is put in front (drives the card's slide-in).
+    @Published private(set) var cardSerial = 0
+    /// Set during extra practice (nil for the scheduled reviews).
+    @Published private(set) var practiceKind: PracticeKind?
 
     let settings: AppSettings
     let now: () -> Date
@@ -37,14 +48,14 @@ final class AppModel: ObservableObject {
     /// How long the green check stays before the next card (seconds). See MECHANICS.md.
     static let correctPause: Double = 0.7
 
-    init(settings: AppSettings, store: StateStore?, fixedSnapshot: VaultSnapshot? = nil,
+    init(settings: AppSettings, store: StateStore?, fixedSnapshot: VaultSnapshot? = nil, initialState: GlossState? = nil,
          calendar: Calendar = .current, now: @escaping () -> Date = Date.init) {
         self.settings = settings
         self.store = store
         self.fixedSnapshot = fixedSnapshot
         self.calendar = calendar
         self.now = now
-        state = store?.load() ?? GlossState()
+        state = initialState ?? store?.load() ?? GlossState()
         reloadVault(force: true)
 
         settings.objectWillChange
@@ -77,6 +88,7 @@ final class AppModel: ObservableObject {
     private var lastDecks: Set<Deck> = []
     private var lastPath = ""
     private func settingsChanged() {
+        objectWillChange.send()
         if settings.decks != lastDecks || settings.vaultPath != lastPath {
             lastDecks = settings.decks
             lastPath = settings.vaultPath
@@ -90,7 +102,8 @@ final class AppModel: ObservableObject {
     // MARK: Due cards
 
     func dueCards() -> [VocabEntry] {
-        let newLeft = max(settings.newPerDay - state.stats(for: today).newIntroduced, 0)
+        let day = state.stats(for: today)
+        let newLeft = max(settings.newPerDay + day.extraNew - day.newIntroduced, 0)
         return scheduler.dueCards(entries, states: state.cards, now: now(), newLimit: newLeft)
     }
 
@@ -113,6 +126,7 @@ final class AppModel: ObservableObject {
 
     /// Starts a new session with the cards due now.
     func startSession() {
+        practiceKind = nil
         session = QuizSession(cards: dueCards(), state: state, scheduler: scheduler, now: now)
         sessionAnswered = 0
         sessionCorrect = 0
@@ -144,8 +158,10 @@ final class AppModel: ObservableObject {
         sessionAnswered = session.answeredCount
         sessionCorrect = session.correctCount
         refreshDue()
+        if settings.speakOnAnswer { Pronouncer.shared.say(outcome.entry.word) }
         if outcome.correct {
             phase = .correct(outcome.entry)
+            answer = "" // the field is free for the next card at once
             let entry = outcome.entry
             DispatchQueue.main.asyncAfter(deadline: .now() + Self.correctPause) { [weak self] in
                 guard let self, self.phase == .correct(entry) else { return }
@@ -156,8 +172,8 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func next() {
-        answer = ""
+    func next(keepAnswer: Bool = false) {
+        if !keepAnswer { answer = "" }
         syncFromSession()
     }
 
@@ -168,9 +184,50 @@ final class AppModel: ObservableObject {
     }
 
     private func syncFromSession() {
+        let previous = current
         current = session?.current
+        cardSerial += 1
         sessionRemaining = session?.remaining ?? 0
         phase = current == nil ? .done : .asking
+        if settings.speakOnShow, let c = current, c != previous { Pronouncer.shared.say(c.word) }
+    }
+
+    /// Says the current card's word (the speaker button).
+    func pronounceCurrent() {
+        if let c = current { Pronouncer.shared.say(c.word) }
+    }
+
+    // MARK: Extra practice
+
+    var isPracticing: Bool { practiceKind != nil }
+
+    /// Cards never answered yet in the decks that are on.
+    var unseenCount: Int { entries.filter { state.cards[$0.word] == nil }.count }
+
+    func practiceCount(_ kind: PracticeKind) -> Int {
+        Practice.available(kind, from: entries, states: state.cards, today: today, calendar: calendar)
+    }
+
+    /// Starts a practice round. Answers are checked and counted, but the schedule does not change.
+    func startPractice(_ kind: PracticeKind) {
+        let cards = Practice.pick(kind, from: entries, states: state.cards, today: today, calendar: calendar)
+        guard !cards.isEmpty else { return }
+        practiceKind = kind
+        session = QuizSession(cards: cards, state: state, scheduler: scheduler, practice: true, now: now)
+        sessionAnswered = 0
+        sessionCorrect = 0
+        answer = ""
+        syncFromSession()
+    }
+
+    /// Adds `Practice.roundSize` new cards to today's schedule (past the daily limit) and starts them.
+    func learnMoreNew() {
+        var day = state.stats(for: today)
+        day.extraNew += Practice.roundSize
+        state.daily[today.iso] = day
+        save()
+        refreshDue()
+        startSession()
     }
 
     private func save() {
@@ -181,6 +238,34 @@ final class AppModel: ObservableObject {
         } catch {
             lastSaveError = error.localizedDescription
         }
+    }
+
+    // MARK: Overview
+
+    var weekAnswers: (answered: Int, correct: Int) {
+        accuracy(days: 7).reduce((0, 0)) { ($0.0 + $1.answered, $0.1 + $1.correct) }
+    }
+
+    var health: EnglishHealth {
+        let w = weekAnswers
+        return Overview.health(answered: w.answered, correct: w.correct, due: dueCount)
+    }
+
+    var streak: (current: Int, best: Int) { Overview.streak(state, today: today, calendar: calendar) }
+
+    var boxCounts: [Int] { Overview.boxCounts(entries, states: state.cards) }
+
+    /// Due cards split into never-answered and review cards.
+    var dueSplit: (new: Int, review: Int) {
+        let due = dueCards()
+        let new = due.filter { state.cards[$0.word] == nil }.count
+        return (new, due.count - new)
+    }
+
+    var weekCategories: [CategoryCount] { categoryCounts(days: 7) }
+
+    func recommendation(fixShortcut: String) -> Recommendation {
+        Overview.recommend(due: dueCards(), week: weekCategories, fixShortcut: fixShortcut, canPractise: !entries.isEmpty)
     }
 
     // MARK: Stats

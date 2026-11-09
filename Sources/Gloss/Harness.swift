@@ -8,6 +8,9 @@ import SwiftUI
 enum Harness {
     final class Clock { var now: Date; init(_ d: Date) { now = d } }
 
+    /// Harness windows are drawn far off-screen, so checks never flash a window on the person's screen.
+    static let offscreen = NSPoint(x: -30_000, y: -30_000)
+
     static func demoSettings() -> AppSettings {
         let name = "app.gloss.harness"
         UserDefaults().removePersistentDomain(forName: name)
@@ -23,6 +26,24 @@ enum Harness {
         AppModel(settings: demoSettings(), store: nil, fixedSnapshot: DemoDeck.snapshot, now: { clock.now })
     }
 
+    /// A demo model with a made-up week of practice, so the overview tiles have something to show.
+    static func demoModelWithHistory(_ clock: Clock) -> AppModel {
+        let cal = Calendar.current
+        let today = Day(clock.now, calendar: cal)
+        var st = GlossState()
+        let history: [(Int, Int)] = [(6, 4), (8, 7), (0, 0), (5, 4), (9, 8), (7, 6)]
+        for (i, h) in history.enumerated() {
+            st.daily[today.adding(days: -(history.count - i), calendar: cal).iso] = DailyStats(answered: h.0, correct: h.1)
+        }
+        st.cards["quintavel"] = CardState(box: 2, due: clock.now.addingTimeInterval(-3_600))
+        st.cards["plexander"] = CardState(box: 1, due: clock.now.addingTimeInterval(-600))
+        st.cards["zorbitude"] = CardState(box: 4, due: clock.now.addingTimeInterval(3 * 86_400))
+        var snap = DemoDeck.snapshot
+        snap.mistakes = MistakeParser.parse(DemoDeck.mistakes, day: today)
+            + MistakeParser.parse("- `in monday` → `on Monday` — 星期幾用 on #介系詞\n- `a advice` → `advice` — 不可數 #冠詞", day: today.adding(days: -2, calendar: cal))
+        return AppModel(settings: demoSettings(), store: nil, fixedSnapshot: snap, initialState: st, now: { clock.now })
+    }
+
     static let sampleFix = FixResult(
         fixed: "I want to check the flumbrance of this server.",
         short: "Let me check this server's flumbrance.",
@@ -34,73 +55,114 @@ enum Harness {
     // MARK: Screenshot
 
     struct Showcase: View {
-        let asking: AppModel
+        let home: AppModel
         let wrong: AppModel
+        let windowModel: AppModel
         let router: Router
-        let fix: FixModel
+        let nav: Navigator
+
+        static let windowSize = CGSize(width: 1000, height: 760)
 
         var body: some View {
-            HStack(alignment: .top, spacing: 22) {
-                VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 30) {
+                VStack(alignment: .leading, spacing: 10) {
                     caption("Menu bar")
                     HStack(spacing: 14) {
                         Spacer()
                         Image(systemName: "wifi")
-                        MenuBarLabel(model: asking)
-                            .padding(.horizontal, 6).padding(.vertical, 2)
-                            .background(RoundedRectangle(cornerRadius: 4).fill(Color.black.opacity(0.12)))
+                        MenuBarLabel(model: home)
+                            .padding(.horizontal, 7).padding(.vertical, 2)
+                            .glass(Capsule(), strength: 0.1)
                         Text("10:00")
                     }
-                    .font(.system(size: 13, weight: .medium))
-                    .padding(.horizontal, 10).frame(width: QuizView.width, height: 24)
-                    .background(Color(white: 0.93))
-                    caption("Quiz")
-                    panel(QuizView().environmentObject(asking).environmentObject(router))
+                    .font(.system(size: 13, weight: .semibold))
+                    .padding(.horizontal, 12).frame(width: HomeView.width, height: 28)
+                    .glass(Capsule(), strength: 0.02)
+                    caption("Click the book icon: quick quiz")
+                    popover(QuizView(onBack: {}).environmentObject(wrong).environmentObject(router))
                 }
-                VStack(alignment: .leading, spacing: 8) {
-                    caption("After a wrong answer")
-                    panel(QuizView().environmentObject(wrong).environmentObject(router))
-                }
-                VStack(alignment: .leading, spacing: 8) {
-                    caption("Fix my English (⌃⌥E)")
-                    panel(FixView(model: fix))
+                VStack(alignment: .leading, spacing: 10) {
+                    caption("The Gloss window: today's cards done, extra practice offered")
+                    MainWindowView()
+                        .environmentObject(windowModel)
+                        .environmentObject(router)
+                        .environmentObject(nav)
+                        .frame(width: Self.windowSize.width, height: Self.windowSize.height)
+                        .background(Theme.wash)
+                        .overlay(alignment: .topLeading) { trafficLights }
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.white.opacity(0.15)))
+                        .shadow(color: .black.opacity(0.45), radius: 24, y: 12)
                 }
             }
-            .padding(24)
-            .background(LinearGradient(colors: [Color(red: 0.86, green: 0.90, blue: 0.97), Color(red: 0.95, green: 0.93, blue: 0.98)],
-                                       startPoint: .topLeading, endPoint: .bottomTrailing))
-            .environment(\.colorScheme, .light)
+            .padding(30)
+            .background(AuroraBackdrop())
+            .environment(\.simulatedGlass, true)
+            .environment(\.colorScheme, .dark)
+        }
+
+        private var trafficLights: some View {
+            HStack(spacing: 8) {
+                Circle().fill(Color(red: 1, green: 0.37, blue: 0.34))
+                Circle().fill(Color(red: 1, green: 0.74, blue: 0.18))
+                Circle().fill(Color(red: 0.16, green: 0.79, blue: 0.25))
+            }
+            .frame(width: 60, height: 12)
+            .padding(.leading, 14).padding(.top, 14)
         }
 
         private func caption(_ s: String) -> some View {
-            Text(s).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+            Text(s).font(.caption.weight(.bold)).foregroundStyle(.white).shadow(color: .black.opacity(0.25), radius: 2)
         }
 
-        private func panel<V: View>(_ v: V) -> some View {
-            v.background(RoundedRectangle(cornerRadius: 12).fill(Color.white))
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.black.opacity(0.08)))
-                .shadow(color: .black.opacity(0.12), radius: 10, y: 4)
+        /// The popover window's own glass around the quiz.
+        private func popover<V: View>(_ v: V) -> some View {
+            v.popoverChrome()
+                .shadow(color: .black.opacity(0.4), radius: 18, y: 8)
         }
     }
 
     static func runScreenshot(to path: String) {
         runApp {
             let clock = Clock(demoMorning())
-            let asking = demoModel(clock)
+            let home = demoModelWithHistory(clock)
             let wrong = demoModel(clock)
             wrong.answer = "flumberance"
             wrong.submit()
-            let fix = FixModel()
-            fix.phase = .done("I want check the flumberance of this server.", sampleFix)
-
-            let host = NSHostingView(rootView: Showcase(asking: asking, wrong: wrong, router: Router(), fix: fix))
+            // `--page <name>` draws only that page of the main window (to check one page).
+            let args = CommandLine.arguments
+            let onlyPage = args.firstIndex(of: "--page").flatMap { i in i + 1 < args.count ? Page(rawValue: args[i + 1]) : nil }
+            // A model whose due cards are all answered, for the "keep practising" screen.
+            let doneModel = demoModelWithHistory(clock)
+            doneModel.openQuiz()
+            while let c = doneModel.current {
+                doneModel.answer = c.word
+                doneModel.submit()
+                doneModel.next()
+            }
+            let quizNav = Navigator()
+            quizNav.page = .quiz
+            let pageNav = Navigator()
+            if let onlyPage { pageNav.page = onlyPage }
+            let root: AnyView = onlyPage == nil
+                ? AnyView(Showcase(home: home, wrong: wrong, windowModel: doneModel, router: Router(), nav: quizNav))
+                : AnyView(MainWindowView().environmentObject(home).environmentObject(Router()).environmentObject(pageNav)
+                    .frame(width: 1000, height: 760).background(Theme.wash).background(Theme.navy)
+                    .environment(\.simulatedGlass, true).environment(\.colorScheme, .dark))
+            let host = NSHostingView(rootView: root)
             host.frame.size = host.fittingSize
-            let window = NSWindow(contentRect: NSRect(origin: NSPoint(x: 40, y: 40), size: host.frame.size),
+            let window = NSWindow(contentRect: NSRect(origin: offscreen, size: host.frame.size),
                                   styleMask: [.borderless], backing: .buffered, defer: false)
-            window.appearance = NSAppearance(named: .aqua)
+            window.appearance = Theme.darkAppearance
             window.contentView = host
             window.orderFrontRegardless()
 
+            afterFrames(110) {
+                // Fit again: the views fill in their data after the first layout.
+                host.frame.size = host.fittingSize
+                window.setContentSize(host.frame.size)
+                host.layoutSubtreeIfNeeded()
+            }
             afterFrames(120) {
                 host.layoutSubtreeIfNeeded()
                 let ok = savePNG(of: host, to: path)
@@ -119,8 +181,9 @@ enum Harness {
         return (try? data.write(to: url)) != nil
     }
 
-    /// Share of pixels that are not near-white: a blank picture gives about 0.
+    /// Share of pixels that differ clearly from the plain background: a blank picture gives about 0.
     static func inkRatio(of view: NSView) -> Double {
+        let bg = NSColor(Theme.navy).usingColorSpace(.deviceRGB)!
         guard let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return 0 }
         view.cacheDisplay(in: view.bounds, to: rep)
         var ink = 0, total = 0
@@ -128,7 +191,8 @@ enum Harness {
             for x in stride(from: 0, to: rep.pixelsWide, by: 2) {
                 total += 1
                 if let c = rep.colorAt(x: x, y: y)?.usingColorSpace(.deviceRGB),
-                   c.alphaComponent > 0.5, c.redComponent + c.greenComponent + c.blueComponent < 2.6 { ink += 1 }
+                   abs(c.redComponent - bg.redComponent) + abs(c.greenComponent - bg.greenComponent)
+                    + abs(c.blueComponent - bg.blueComponent) > 0.25 { ink += 1 }
             }
         }
         return total == 0 ? 0 : Double(ink) / Double(total)
@@ -157,14 +221,43 @@ enum Harness {
             // hud: badge number, the prompt text and a drawn quiz view.
             let first = model.current
             let prompt = first.map(CardPrompt.text(for:)) ?? "none"
-            let host = NSHostingView(rootView: QuizView().environmentObject(model).environmentObject(Router()))
+            let host = NSHostingView(rootView: QuizView().environmentObject(model).environmentObject(Router())
+                .background(Theme.navy)
+                .environment(\.simulatedGlass, true)
+                .environment(\.colorScheme, .dark))
             host.frame.size = host.fittingSize
-            let window = NSWindow(contentRect: NSRect(origin: .init(x: 40, y: 40), size: host.frame.size),
+            let window = NSWindow(contentRect: NSRect(origin: offscreen, size: host.frame.size),
                                   styleMask: [.borderless], backing: .buffered, defer: false)
             window.contentView = host
             window.orderFrontRegardless()
 
-            afterFrames(60) {
+            // window: every page of the one main window draws.
+            let pageHosts: [(Page, NSHostingView<AnyView>)] = Page.allCases.map { page in
+                let nav = Navigator()
+                nav.page = page
+                let pm = demoModelWithHistory(Clock(demoMorning()))
+                let v = NSHostingView(rootView: AnyView(MainWindowView().environmentObject(pm).environmentObject(Router())
+                    .environmentObject(nav).frame(width: 1000, height: 760).background(Theme.navy)
+                    .environment(\.simulatedGlass, true).environment(\.colorScheme, .dark)))
+                v.frame.size = CGSize(width: 1000, height: 760)
+                let w = NSWindow(contentRect: NSRect(origin: offscreen, size: v.frame.size), styleMask: [.borderless],
+                                 backing: .buffered, defer: false)
+                w.contentView = v
+                w.orderFrontRegardless()
+                return (page, v)
+            }
+
+            // home: built now, measured after its fade-in animations have run.
+            let hm = demoModelWithHistory(Clock(demoMorning()))
+            let homeHost = NSHostingView(rootView: PopoverRoot().environmentObject(hm).environmentObject(Router())
+                .background(Theme.navy).environment(\.simulatedGlass, true).environment(\.colorScheme, .dark))
+            homeHost.frame.size = homeHost.fittingSize
+            let homeWindow = NSWindow(contentRect: NSRect(origin: offscreen, size: homeHost.frame.size),
+                                      styleMask: [.borderless], backing: .buffered, defer: false)
+            homeWindow.contentView = homeHost
+            homeWindow.orderFrontRegardless()
+
+            afterFrames(90) {
                 let ink = inkRatio(of: host)
                 let hudOK = model.dueCount == 5 && prompt == "容量 → f_________ (10)" && ink > 0.01
                 steps.append(Step(step: "hud", passed: hudOK,
@@ -210,6 +303,22 @@ enum Harness {
                 let requeueOK = seen.contains("flumbrance") && model.phase == .done
                 steps.append(Step(step: "requeue", passed: requeueOK, detail: "rest of the round: \(seen.joined(separator: ", "))"))
 
+                // practice: after the day's cards are done, extra rounds still work and leave the schedule alone.
+                let scheduleBefore = model.state.cards
+                model.startPractice(.hardest)
+                let practiceFirst = model.current
+                model.answer = practiceFirst?.word ?? ""
+                model.submit()
+                model.next()
+                let practicedToday = model.state.stats(for: model.today).practiced
+                let practiceOK = model.isPracticing && practiceFirst != nil && model.state.cards == scheduleBefore
+                    && practicedToday == 1 && model.practiceCount(.today) == 5
+                let extraBefore = model.state.stats(for: model.today).extraNew
+                model.learnMoreNew()
+                let extraOK = model.state.stats(for: model.today).extraNew == extraBefore + Practice.roundSize && !model.isPracticing
+                steps.append(Step(step: "practice", passed: practiceOK && extraOK,
+                                  detail: "after all cards were done: practice round “hardest” starts with “\(practiceFirst?.word ?? "none")”; answering it left every box and due time unchanged; \(practicedToday) practice answer counted; “Today's words” offers \(model.practiceCount(.today)); “Learn more” raised today's new-card limit by \(Practice.roundSize)"))
+
                 // schedule: answered correctly today → not due again today; due again tomorrow.
                 let w = before?.word ?? ""
                 clock.now = clock.now.addingTimeInterval(3_600)
@@ -218,6 +327,35 @@ enum Harness {
                 let dueTomorrow = model.dueCards().contains { $0.word == w }
                 steps.append(Step(step: "schedule", passed: !dueLater && dueTomorrow,
                                   detail: "“\(w)” due 1 h later: \(dueLater); due tomorrow: \(dueTomorrow) (box 1 → 10 min, 1 day after a correct answer)"))
+
+                // pronounce: the speaker button and the spoken answer (muted here; what would be said is recorded).
+                model.startSession()
+                let spokenBefore = Pronouncer.shared.spokenCount
+                model.pronounceCurrent()
+                let buttonSaid = Pronouncer.shared.lastSpoken
+                let cardWord = model.current?.word
+                model.answer = "zzz"
+                model.submit()
+                let answerSaid = Pronouncer.shared.lastSpoken
+                let pronounceOK = cardWord != nil && buttonSaid == cardWord && answerSaid == cardWord
+                    && Pronouncer.shared.spokenCount == spokenBefore + 2
+                steps.append(Step(step: "pronounce", passed: pronounceOK,
+                                  detail: "speaker button says “\(buttonSaid ?? "nothing")”; after an answer it says “\(answerSaid ?? "nothing")” (en-US system voice, \(Pronouncer.rateFactor)× speed)"))
+
+                let pageInk = pageHosts.map { ($0.0, inkRatio(of: $0.1)) }
+                let pagesOK = pageInk.allSatisfy { $0.1 > 0.05 }
+                steps.append(Step(step: "window", passed: pagesOK,
+                                  detail: "one main window with \(Page.allCases.count) pages: " + pageInk.map { "\($0.0.title) \(String(format: "%.0f", $0.1 * 100))%" }.joined(separator: ", ") + " ink"))
+
+                // home: the overview tiles and recommendation, and Start Quiz switching to the quiz.
+                let homeInk = inkRatio(of: homeHost)
+                let rec = hm.recommendation(fixShortcut: "⌃⌥E")
+                let wk = hm.weekAnswers
+                hm.showingQuiz = true
+                let homeOK = hm.health != .gettingStarted && hm.streak.current == 3 && rec.action == .quiz
+                    && hm.boxCounts.reduce(0, +) == 5 && homeInk > 0.05 && hm.showingQuiz
+                steps.append(Step(step: "home", passed: homeOK,
+                                  detail: "English Health: \(hm.health.rawValue) (\(wk.correct)/\(wk.answered) in 7 days); streak \(hm.streak.current); boxes \(hm.boxCounts); recommendation “\(rec.title)”; Start Quiz opens the quiz; overview drawn (\(String(format: "%.0f", homeInk * 100))% ink)"))
 
                 // fix_json and nudge: the parts of the hotkey and reminders that run without other apps.
                 let parsed = try? FixPrompt.parse("```json\n{\"fixed\":\"He goes.\",\"short\":\"He goes.\",\"mistakes\":[]}\n```")
@@ -229,13 +367,63 @@ enum Harness {
                 let n2 = NudgePolicy.shouldNudge(now: night, lastNudge: nil, intervalMinutes: 60, dueCount: 3, quiet: .default, calendar: cal)
                 steps.append(Step(step: "nudge", passed: n1 && !n2, detail: "10:00 → nudge \(n1); 23:00 (quiet hours) → nudge \(n2)"))
 
-                let enc = JSONEncoder()
-                enc.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
-                let url = URL(fileURLWithPath: path)
-                try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-                try? enc.encode(Report(steps: steps)).write(to: url)
-                for s in steps { print("\(s.passed ? "PASS" : "FAIL") \(s.step): \(s.detail)") }
-                exit(steps.allSatisfy(\.passed) ? 0 : 1)
+                // focus: after a right answer the next card can be typed without clicking.
+                focusCheck { step in
+                    steps.append(step)
+                    let enc = JSONEncoder()
+                    enc.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+                    let url = URL(fileURLWithPath: path)
+                    try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+                    try? enc.encode(Report(steps: steps)).write(to: url)
+                    for s in steps { print("\(s.passed ? "PASS" : "FAIL") \(s.step): \(s.detail)") }
+                    exit(steps.allSatisfy(\.passed) ? 0 : 1)
+                }
+            }
+        }
+    }
+
+    /// Opens the quiz in a real (off-screen, key) window and checks where the cursor is after each card.
+    private static func focusCheck(done: @escaping (Step) -> Void) {
+        let clock = Clock(demoMorning())
+        let m = demoModel(clock)
+        let host = NSHostingView(rootView: QuizView(width: 480, showsFooter: false).environmentObject(m).environmentObject(Router())
+            .environment(\.colorScheme, .dark))
+        host.frame.size = CGSize(width: 480, height: 520)
+        let w = KeyablePanel(contentRect: NSRect(origin: offscreen, size: host.frame.size),
+                             styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+        w.contentView = host
+        w.orderFrontRegardless()
+        w.makeKey()
+
+        func cursorInField() -> Bool {
+            if let tv = w.firstResponder as? NSTextView { return tv.isFieldEditor }
+            return w.firstResponder is NSTextField
+        }
+
+        afterFrames(30) {
+            let atStart = cursorInField()
+            let first = m.current
+            m.answer = first?.word ?? ""
+            m.submit()                                  // right answer → green check, then the next card by itself
+            afterFrames(Int(AppModel.correctPause * 60) + 30) {
+                let second = m.current
+                let afterCorrect = cursorInField()
+                m.answer = "zzz"
+                m.submit()                              // wrong answer
+                m.submit()                              // Enter again → next card
+                afterFrames(30) {
+                    let afterWrong = cursorInField()
+                    let third = m.current
+                    m.answer = third?.word ?? ""
+                    m.submit()                          // right; now type during the green-check pause
+                    m.answer = "q"
+                    let typedThrough = m.phase == .asking && m.answer == "q" && m.current != third
+                    afterFrames(30) {
+                        let ok = atStart && afterCorrect && afterWrong && typedThrough && second != first
+                        done(Step(step: "focus", passed: ok,
+                                  detail: "cursor in the answer field: at start \(atStart), after a right answer \(afterCorrect), after a wrong answer + Enter \(afterWrong); typing during the green check went to the next card keeping “q”: \(typedThrough)"))
+                    }
+                }
             }
         }
     }
@@ -250,7 +438,9 @@ enum Harness {
     private static var launcher: Launcher?
 
     private static func runApp(_ work: @escaping () -> Void) {
+        Pronouncer.shared.muted = true
         let app = NSApplication.shared
+        app.appearance = Theme.darkAppearance
         app.setActivationPolicy(.accessory)
         launcher = Launcher(work)
         app.delegate = launcher

@@ -13,20 +13,40 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
+            Section("How Gloss works") {
+                explain("tablecells", Theme.link, "Where the words come from",
+                        "The table under “## 拼字” in 單字.md (and “## 用字” if that deck is on): the 中文 column is the question, 正確拼法 is the answer, 記法 is the hint shown after a mistake. \(model.entries.count) cards right now. Gloss only reads the file.")
+                explain("checkmark.circle", Theme.good, "How an answer is checked — no AI",
+                        "Your typing must match 正確拼法 exactly, ignoring upper/lower case and extra spaces. When it doesn't, a letter-by-letter comparison (edit distance) marks the letters that differ.")
+                explain("sparkles", Theme.violet, "When AI is used",
+                        "Only for Fix My English: the text you select or paste goes to the claude command (Claude Code) on this Mac. The quiz, schedule, stats and pronunciation (the macOS voice) all run offline.")
+            }
             Section("Vault (read-only)") {
                 HStack {
                     TextField("Folder", text: $settings.vaultPath)
                     Button("Choose…", action: chooseFolder)
+                        .buttonStyle(GlassPillStyle(compact: true))
                 }
                 Text(vaultSummary).font(.caption).foregroundStyle(.secondary)
                 ForEach(model.snapshot.problems, id: \.self) { p in
-                    Text(p).font(.caption).foregroundStyle(.orange)
+                    Text(p).font(.caption).foregroundStyle(Theme.warn)
                 }
             }
             Section("Decks") {
                 Toggle("Spelling (## 拼字) — \(model.snapshot.decks[.spelling]?.count ?? 0) cards", isOn: $settings.spellingDeck)
                 Toggle("Word choice (## 用字) — \(model.snapshot.decks[.usage]?.count ?? 0) cards", isOn: $settings.usageDeck)
                 Stepper("New cards per day: \(settings.newPerDay)", value: $settings.newPerDay, in: 0...200, step: 5)
+            }
+            Section("Pronunciation") {
+                Toggle("Say the word after each answer", isOn: $settings.speakOnAnswer)
+                Toggle("Say the word when a card appears (dictation mode)", isOn: $settings.speakOnShow)
+                HStack {
+                    Text("Voice: system English (en-US). Press ⌘P on a card to hear it.")
+                        .font(.caption).foregroundStyle(.secondary)
+                    Spacer()
+                    Button { Pronouncer.shared.say("pronunciation") } label: { Label("Test", systemImage: "speaker.wave.2.fill") }
+                        .buttonStyle(GlassPillStyle(compact: true))
+                }
             }
             Section("Reminders") {
                 Toggle("Remind me when cards are due", isOn: $settings.nudgesOn)
@@ -43,33 +63,58 @@ struct SettingsView: View {
                 }
                 .disabled(!settings.nudgesOn)
             }
-            Section("Fix my English") {
+            Section("Shortcuts") {
                 HStack {
-                    Text("Shortcut")
+                    Text("Open Gloss (from anywhere)")
                     Spacer()
-                    HotKeyRecorder(combo: $settings.hotKey)
+                    HotKeyRecorder(combo: $settings.openHotKey, defaultCombo: .openDefault)
+                }
+                HStack {
+                    Text("Fix my English")
+                    Spacer()
+                    HotKeyRecorder(combo: $settings.hotKey, defaultCombo: .default)
                 }
                 HStack {
                     Image(systemName: trusted ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                        .foregroundStyle(trusted ? .green : .orange)
+                        .foregroundStyle(trusted ? Theme.good : Theme.warn)
                     Text(trusted ? "Accessibility permission granted" : "Needs Accessibility permission to copy your selection")
                     Spacer()
-                    if !trusted { Button("Open System Settings") { Permissions.openAccessibilitySettings() } }
+                    if !trusted {
+                        Button("Open System Settings") { Permissions.openAccessibilitySettings() }
+                            .buttonStyle(GlassPillStyle(tint: Theme.accent, prominent: true, compact: true))
+                    }
                 }
             }
             Section("General") {
                 Toggle("Launch at login", isOn: $launchAtLogin)
                     .onChange(of: launchAtLogin) { _, on in setLaunchAtLogin(on) }
-                if let loginError { Text(loginError).font(.caption).foregroundStyle(.orange) }
+                if let loginError { Text(loginError).font(.caption).foregroundStyle(Theme.warn) }
                 Text("Progress: \(StateStore.defaultURL.path)").font(.caption).foregroundStyle(.secondary)
                     .textSelection(.enabled)
             }
         }
         .formStyle(.grouped)
-        .frame(width: 540, height: 640)
+        .scrollContentBackground(.hidden)
+        .fontDesign(.rounded)
+        .frame(minWidth: 520, maxWidth: 760)
+        .frame(maxWidth: .infinity)
         .onReceive(Timer.publish(every: 2, on: .main, in: .common).autoconnect()) { _ in
             trusted = AXIsProcessTrusted()
         }
+    }
+
+    private func explain(_ icon: String, _ color: Color, _ title: String, _ text: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(color)
+                .frame(width: 22)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title).font(.system(size: 13, weight: .semibold))
+                Text(text).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.vertical, 2)
     }
 
     private var vaultSummary: String {
@@ -111,6 +156,7 @@ struct SettingsView: View {
 /// A button that records the next shortcut pressed.
 struct HotKeyRecorder: View {
     @Binding var combo: HotKeyCombo
+    var defaultCombo: HotKeyCombo
     @State private var recording = false
     @State private var monitor: Any?
 
@@ -118,8 +164,8 @@ struct HotKeyRecorder: View {
         HStack {
             Button(recording ? "Press a shortcut…" : combo.display) { recording ? stop() : start() }
                 .frame(minWidth: 120)
-            if combo != .default {
-                Button("Reset") { combo = .default; HotKeyCenter.shared.register(combo) }
+            if combo != defaultCombo {
+                Button("Reset") { combo = defaultCombo }
             }
         }
     }
@@ -130,7 +176,6 @@ struct HotKeyRecorder: View {
             if event.keyCode == 53 { stop(); return nil } // Esc cancels
             if let c = HotKeyCombo(event: event) {
                 combo = c
-                HotKeyCenter.shared.register(c)
                 stop()
                 return nil
             }
