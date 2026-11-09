@@ -18,6 +18,8 @@ checks answers **without AI**, and fixes any English you select with one shortcu
 [![Tests](https://img.shields.io/badge/tests-61%20passing-34d399)](Tests/GlossCoreTests)
 [![No AI in the quiz](https://img.shields.io/badge/quiz-offline%2C%20no%20AI-22d3ee)](#-how-it-works)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/ggwhite/gloss?color=7d70ff)](../../releases/latest)
+[![CI](https://github.com/ggwhite/gloss/actions/workflows/ci.yml/badge.svg)](https://github.com/ggwhite/gloss/actions/workflows/ci.yml)
 
 [Install](#-install) · [Features](#-features) · [How it works](#-how-it-works) · [Vault format](#-vault-format) · [Shortcuts](#%EF%B8%8F-shortcuts) · [Build](#-build) · [Release](#-release) · [License](#-license)
 
@@ -31,7 +33,7 @@ checks answers **without AI**, and fixes any English you select with one shortcu
 
 ## 📦 Install
 
-1. Build the disk image with `make dmg` (needs Xcode 15+), or grab `Gloss.dmg` from [Releases](../../releases) when one is published.
+1. Download **Gloss-vX.Y.Z-macOS-universal.dmg** from the [latest release](../../releases/latest) (Apple silicon and Intel), or build it yourself with `make dmg`.
 2. Open it and drag **Gloss** onto **Applications** (or run `make install`).
 3. Open Gloss. It lives in the menu bar (the book icon with the number of cards due); press **⌃⌥G** to open its window.
 4. In Settings, turn on **Launch at login**, and allow **Accessibility** for Fix My English.
@@ -210,16 +212,32 @@ All of them use a built-in deck of **made-up words** and never touch your vault 
 
 ## 🚀 Release
 
-`make dmg` and `make install` sign with the first **Developer ID Application** certificate in your
-keychain (hardened runtime); everyday `make app` builds are ad-hoc. The first time, macOS asks to let
-`codesign` use the key — enter your login password and choose **Always Allow**.
-
-To notarize, save credentials once and pass the profile name:
+Push a version tag and GitHub Actions does the rest, like this:
 
 ```sh
-xcrun notarytool store-credentials gloss-notary --apple-id you@example.com --team-id TEAMID
-NOTARY_PROFILE=gloss-notary make dmg
+git tag v0.1.0 && git push origin v0.1.0
 ```
+
+The [release workflow](.github/workflows/release.yml) runs the tests on a macOS 26 runner, builds a
+**universal** app (arm64 + x86_64), signs it with your **Developer ID**, **notarizes** and staples the DMG,
+and attaches `Gloss-v0.1.0-macOS-universal.dmg` and `checksums.txt` to the release.
+It needs these repository secrets (*Settings → Secrets and variables → Actions*):
+
+| Secret | Value |
+|---|---|
+| `MACOS_CERTIFICATE_P12` | base64 of your exported *Developer ID Application* certificate (`base64 -i cert.p12`) |
+| `MACOS_CERTIFICATE_PASSWORD` | the password you gave the .p12 |
+| `MACOS_CODESIGN_IDENTITY` | `Developer ID Application: Your Name (TEAMID)` |
+| `NOTARY_KEY_P8` | base64 of an App Store Connect API key (`base64 -i AuthKey_XXXX.p8`) |
+| `NOTARY_KEY_ID` | that key's ID |
+| `NOTARY_ISSUER_ID` | your issuer ID |
+
+Without them the workflow still publishes the DMG, ad-hoc signed and marked *not notarized*.
+To rebuild an existing tag after adding secrets: *Actions → Release → Run workflow*.
+
+Locally, `make dmg` and `make install` sign with the first Developer ID certificate in your keychain
+(the first time, macOS asks to let `codesign` use the key: choose **Always Allow**), and notarize when
+`NOTARY_KEY_PATH`/`NOTARY_KEY_ID`/`NOTARY_ISSUER_ID` or `NOTARY_PROFILE` is set.
 
 ## 📄 License
 

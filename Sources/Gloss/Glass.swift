@@ -29,8 +29,8 @@ struct GlassModifier<S: Shape>: ViewModifier {
     func body(content: Content) -> some View {
         if simulated {
             content.background(DrawnGlass(shape: shape, tint: tint, tintStrength: tintStrength, dark: scheme == .dark))
-        } else if #available(macOS 26.0, *) {
-            content.glassEffect(glass, in: shape)
+        } else if #available(macOS 26.0, *), Self.hasLiquidGlass {
+            liquid(content)
         } else {
             content
                 .background(shape.fill(.ultraThinMaterial))
@@ -39,13 +39,21 @@ struct GlassModifier<S: Shape>: ViewModifier {
         }
     }
 
+    /// Liquid Glass needs the macOS 26 SDK (Swift 6.2, Xcode 26); older toolchains build the frosted fallback.
+    #if compiler(>=6.2)
+    static var hasLiquidGlass: Bool { true }
+
     @available(macOS 26.0, *)
-    private var glass: Glass {
+    private func liquid(_ content: Content) -> some View {
         var g = Glass.regular
         if let tint { g = g.tint(tint.opacity(min(1, tintStrength * 1.6))) }
         if interactive { g = g.interactive() }
-        return g
+        return content.glassEffect(g, in: shape)
     }
+    #else
+    static var hasLiquidGlass: Bool { false }
+    private func liquid(_ content: Content) -> some View { content }
+    #endif
 }
 
 private enum Edge {
@@ -89,11 +97,15 @@ extension View {
 
     /// Groups glass shapes so they blend into each other on macOS 26.
     @ViewBuilder func glassGroup(spacing: CGFloat = 10) -> some View {
+        #if compiler(>=6.2)
         if #available(macOS 26.0, *) {
             GlassEffectContainer(spacing: spacing) { self }
         } else {
             self
         }
+        #else
+        self
+        #endif
     }
 }
 

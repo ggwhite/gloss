@@ -1,0 +1,139 @@
+name: Release
+
+# Push a tag like v0.1.0 (or run it by hand for an existing tag) to build a universal Gloss.dmg,
+# sign it with the Developer ID certificate, notarize it, and attach it to the GitHub release.
+#
+# Secrets (the same names 4x uses):
+#   MACOS_CERTIFICATE_P12       base64 of the exported "Developer ID Application" .p12
+#   MACOS_CERTIFICATE_PASSWORD  the .p12 password
+#   MACOS_CODESIGN_IDENTITY     e.g. "Developer ID Application: Your Name (TEAMID)"
+#   NOTARY_KEY_P8               base64 of the App Store Connect API key (.p8)
+#   NOTARY_KEY_ID               its Key ID
+#   NOTARY_ISSUER_ID            its Issuer ID
+# Without them the DMG is still built and attached, ad-hoc signed and marked "not notarized".
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to (re)build, e.g. v0.1.0"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  dmg:
+    name: Package, sign & notarize Gloss.dmg
+    runs-on: macos-26
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+      HAS_CERT: ${{ secrets.MACOS_CERTIFICATE_P12 != '' }}
+      HAS_NOTARY: ${{ secrets.NOTARY_KEY_P8 != '' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+          fetch-depth: 0
+
+      - name: Use the newest Xcode
+        run: |
+          XCODE="$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+          sudo xcode-select -s "$XCODE"
+          xcodebuild -version && swift --version
+
+      - name: Unit tests
+        run: swift test
+
+      # Import the Developer ID certificate into a temporary keychain for codesign.
+      - name: Import signing certificate
+        if: env.HAS_CERT == 'true'
+        env:
+          MACOS_CERTIFICATE_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        run: |
+          CERT_PATH="$RUNNER_TEMP/certificate.p12"
+          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain-db"
+          KEYCHAIN_PASSWORD="$(openssl rand -base64 24)"
+          echo "$MACOS_CERTIFICATE_P12" | base64 --decode > "$CERT_PATH"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERT_PATH" -P "$MACOS_CERTIFICATE_PASSWORD" \
+            -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: \
+            -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH" >/dev/null
+          security list-keychain -d user -s "$KEYCHAIN_PATH" \
+            $(security list-keychains -d user | sed s/\"//g)
+          rm -f "$CERT_PATH"
+
+      - name: Write the notary API key
+        if: env.HAS_NOTARY == 'true'
+        env:
+          NOTARY_KEY_P8: ${{ secrets.NOTARY_KEY_P8 }}
+        run: echo "$NOTARY_KEY_P8" | base64 --decode > "$RUNNER_TEMP/notary_key.p8"
+
+      - name: Build the universal DMG
+        env:
+          SIGN_ID: ${{ secrets.MACOS_CODESIGN_IDENTITY }}
+          NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+          NOTARY_ISSUER_ID: ${{ secrets.NOTARY_ISSUER_ID }}
+        run: |
+          [ "$HAS_NOTARY" = "true" ] && export NOTARY_KEY_PATH="$RUNNER_TEMP/notary_key.p8"
+          [ -z "$SIGN_ID" ] && export SIGN_ID="-"
+          VERSION="$TAG" UNIVERSAL=1 ./scripts/dmg.sh
+
+      - name: Verify
+        id: verify
+        run: |
+          lipo -archs build/Gloss.app/Contents/MacOS/Gloss | grep -q arm64
+          lipo -archs build/Gloss.app/Contents/MacOS/Gloss | grep -q x86_64
+          codesign --verify --deep --strict build/Gloss.app
+          if xcrun stapler validate build/Gloss.dmg >/dev/null 2>&1; then
+            echo "notarized=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "notarized=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Name the files for the release
+        run: |
+          mkdir -p dist
+          cp build/Gloss.dmg "dist/Gloss-${TAG}-macOS-universal.dmg"
+          (cd dist && shasum -a 256 *.dmg > checksums.txt && cat checksums.txt)
+
+      - name: Write release notes
+        env:
+          NOTARIZED: ${{ steps.verify.outputs.notarized }}
+        run: |
+          {
+            echo "## Install"
+            echo
+            echo "1. Download **Gloss-${TAG}-macOS-universal.dmg** below (Apple silicon and Intel, macOS 14 or later)."
+            echo "2. Open it and drag **Gloss** onto **Applications**."
+            echo "3. Open Gloss — it lives in the menu bar. Press **⌃⌥G** to open its window."
+            echo
+            if [ "$NOTARIZED" != "true" ]; then
+              echo "> [!NOTE]"
+              echo "> This build is not notarized. The first time, right-click Gloss in Applications and choose **Open**."
+              echo
+            fi
+          } > "$RUNNER_TEMP/notes.md"
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/*.dmg dist/checksums.txt --clobber
+          else
+            gh release create "$TAG" dist/*.dmg dist/checksums.txt \
+              --title "Gloss ${TAG}" --notes-file "$RUNNER_TEMP/notes.md" --generate-notes --verify-tag
+          fi
+
+      - name: Clean up signing material
+        if: always()
+        run: |
+          security delete-keychain "$RUNNER_TEMP/build.keychain-db" 2>/dev/null || true
+          rm -f "$RUNNER_TEMP/notary_key.p8" "$RUNNER_TEMP/certificate.p12"
