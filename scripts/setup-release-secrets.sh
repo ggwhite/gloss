@@ -40,8 +40,8 @@ cert)
     python3 - "$TMP" "$OPENSSL" <<'PY'
 import re, subprocess, sys, pathlib
 tmp, openssl = pathlib.Path(sys.argv[1]), sys.argv[2]
-pem = (tmp / "all.pem").read_text()
-blocks = re.findall(r"-----BEGIN ([A-Z ]+)-----.*?-----END \1-----\n?", pem, re.S)
+# The "Bag Attributes" lines may hold non-UTF-8 names; the PEM blocks themselves are ASCII.
+pem = (tmp / "all.pem").read_bytes().decode("latin-1")
 texts = [m.group(0) for m in re.finditer(r"-----BEGIN ([A-Z ]+)-----.*?-----END \1-----\n?", pem, re.S)]
 def run(args, data):
     return subprocess.run([openssl] + args, input=data.encode(), capture_output=True).stdout.decode()
