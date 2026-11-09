@@ -10,6 +10,8 @@ name: Release
 #   NOTARY_KEY_P8               base64 of the App Store Connect API key (.p8)
 #   NOTARY_KEY_ID               its Key ID
 #   NOTARY_ISSUER_ID            its Issuer ID
+# Or, instead of the API key, an Apple ID: NOTARY_APPLE_ID, NOTARY_PASSWORD (app-specific), NOTARY_TEAM_ID.
+# scripts/setup-release-secrets.sh sets all of these from your Mac.
 # Without them the DMG is still built and attached, ad-hoc signed and marked "not notarized".
 
 on:
@@ -80,6 +82,9 @@ jobs:
           SIGN_ID: ${{ secrets.MACOS_CODESIGN_IDENTITY }}
           NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
           NOTARY_ISSUER_ID: ${{ secrets.NOTARY_ISSUER_ID }}
+          NOTARY_APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
+          NOTARY_PASSWORD: ${{ secrets.NOTARY_PASSWORD }}
+          NOTARY_TEAM_ID: ${{ secrets.NOTARY_TEAM_ID }}
         run: |
           [ "$HAS_NOTARY" = "true" ] && export NOTARY_KEY_PATH="$RUNNER_TEMP/notary_key.p8"
           [ -z "$SIGN_ID" ] && export SIGN_ID="-"

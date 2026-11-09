@@ -232,6 +232,17 @@ It needs these repository secrets (*Settings → Secrets and variables → Actio
 | `NOTARY_KEY_ID` | that key's ID |
 | `NOTARY_ISSUER_ID` | your issuer ID |
 
+Instead of the API key you can notarize with an Apple ID: `NOTARY_APPLE_ID`, `NOTARY_PASSWORD`
+(an app-specific password) and `NOTARY_TEAM_ID`.
+
+`scripts/setup-release-secrets.sh` sets them from your Mac without printing anything secret:
+
+```sh
+scripts/setup-release-secrets.sh cert                     # exports your Developer ID identity (macOS asks to allow)
+scripts/setup-release-secrets.sh notary-apple-id          # or: notary-key ~/Downloads/AuthKey_XXXX.p8 <issuer-id>
+gh workflow run release.yml -f tag=v0.1.0                 # rebuild the release, signed and notarized
+```
+
 Without them the workflow still publishes the DMG, ad-hoc signed and marked *not notarized*.
 To rebuild an existing tag after adding secrets: *Actions → Release → Run workflow*.
 
