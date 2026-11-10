@@ -93,6 +93,7 @@ Every number that shapes how Gloss behaves. "request" means the person's build r
 | Open Gloss from anywhere | ⌃⌥G shows the overview as a window at the top right (press again to hide) | person's follow-up; key estimated |
 | First launch / opening Gloss.app again | shows the overview, with a "Gloss lives in your menu bar" note until "Got It" | person's follow-up |
 | Windows | one main window with a sidebar: Overview, Quiz, Stats, Fix My English, Settings (⌘1–5); the menu, ⌃⌥G, notifications and reopening all open it | person's follow-up (too many windows) |
+| ⌘Tab and Dock | while the Gloss window is open Gloss is a regular app (Dock icon, ⌘Tab, ⌘W closes); closed, it is menu bar only (setting, on by default) | person's follow-up |
 | Main window size | 1000 × 760 pt (min 900 × 640), position remembered | estimated |
 | Screenshot and self-test windows | drawn off-screen, so checks never flash a window | person's follow-up |
 | Today's Recommendation | due cards first (names the meaning, never the word), then the worst 7-day category, then Fix my English | estimated |

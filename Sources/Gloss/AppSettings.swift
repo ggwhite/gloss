@@ -22,6 +22,8 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(try? JSONEncoder().encode(openHotKey), forKey: Keys.openHotKey) }
     }
     @Published var welcomeDone: Bool { didSet { defaults.set(welcomeDone, forKey: Keys.welcomeDone) } }
+    /// While the Gloss window is open, show Gloss in the Dock and in ⌘Tab.
+    @Published var dockWhileOpen: Bool { didSet { defaults.set(dockWhileOpen, forKey: Keys.dockWhileOpen) } }
 
     enum Keys {
         static let vaultPath = "vaultPath", spellingDeck = "deck.spelling", usageDeck = "deck.usage"
@@ -29,7 +31,7 @@ final class AppSettings: ObservableObject {
         static let quietStart = "quiet.start", quietEnd = "quiet.end"
         static let newPerDay = "newPerDay", hotKey = "hotKey", lastNudge = "nudge.last"
         static let speakOnAnswer = "speak.onAnswer", speakOnShow = "speak.onShow"
-        static let openHotKey = "openHotKey", welcomeDone = "welcomeDone"
+        static let openHotKey = "openHotKey", welcomeDone = "welcomeDone", dockWhileOpen = "dockWhileOpen"
     }
 
     /// Defaults; see MECHANICS.md.
@@ -61,6 +63,7 @@ final class AppSettings: ObservableObject {
             openHotKey = .openDefault
         }
         welcomeDone = defaults.bool(forKey: Keys.welcomeDone)
+        dockWhileOpen = defaults.object(forKey: Keys.dockWhileOpen) as? Bool ?? true
     }
 
     var decks: Set<Deck> {

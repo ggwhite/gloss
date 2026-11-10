@@ -32,7 +32,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         notifier.onOpen = { [weak self] in self?.open(.quiz) }
         notifier.setUp()
 
-        settings.$hotKey.removeDuplicates()
+        settings.$dockWhileOpen.removeDuplicates().dropFirst()
+            .sink { [weak self] _ in
+                DispatchQueue.main.async { self?.setInAppSwitcher(self?.mainWindow?.isVisible ?? false) }
+            }
+            .store(in: &bag)
+                settings.$hotKey.removeDuplicates()
             .sink { combo in HotKeyCenter.shared.register(.fixEnglish, combo) { [weak self] in self?.fix.trigger() } }
             .store(in: &bag)
         settings.$openHotKey.removeDuplicates()
@@ -71,7 +76,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func toggleOverview() {
-        if let w = mainWindow, w.isVisible, w.isKeyWindow { w.orderOut(nil) } else { open(.overview) }
+        if let w = mainWindow, w.isVisible, w.isKeyWindow {
+            w.orderOut(nil)
+            setInAppSwitcher(false)
+        } else {
+            open(.overview)
+        }
+    }
+
+    /// A menu bar app (LSUIElement) is left out of ⌘Tab and the Dock. While the Gloss window is open it
+    /// becomes a regular app so ⌘Tab reaches it; when the window closes it goes back to the menu bar only.
+    private func setInAppSwitcher(_ on: Bool) {
+        let wanted: NSApplication.ActivationPolicy = on && settings.dockWhileOpen ? .regular : .accessory
+        if NSApp.activationPolicy() != wanted { NSApp.setActivationPolicy(wanted) }
     }
 
     /// Reloads the vault when it changed (polling fallback), updates the badge, and sends a nudge when it is time.
@@ -118,7 +135,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             window.isReleasedWhenClosed = false
             if !window.setFrameUsingName("GlossMainWindow") { window.center() }
             mainWindow = window
+            NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: window,
+                                                   queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.setInAppSwitcher(false) }
+            }
         }
+        setInAppSwitcher(true)
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
     }

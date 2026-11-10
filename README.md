@@ -171,6 +171,7 @@ Categories: `#冠詞 #動詞形式 #單複數 #拼字 #用字 #介系詞 #句型
 | **⌘P** | hear the word |
 | **⌘1 – ⌘5** | Overview, Quiz, Stats, Fix My English, Settings |
 | **⌘[** | back to the overview in the menu |
+| **⌘Tab / ⌘W** | while the Gloss window is open, Gloss is in the Dock and ⌘Tab; ⌘W closes it and Gloss goes back to the menu bar |
 
 ## 🔐 Permissions
 

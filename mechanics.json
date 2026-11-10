@@ -429,6 +429,12 @@
       "group": "controls",
       "value": "starts the next card at once, keeping the letters",
       "estimated": true
+    },
+    {
+      "name": "in Dock and Cmd+Tab while the window is open",
+      "group": "controls",
+      "value": true,
+      "source": "person's follow-up (could not Cmd+Tab to the Gloss window); setting, default on"
     }
   ]
 }

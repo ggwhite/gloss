@@ -86,6 +86,7 @@ struct SettingsView: View {
                 }
             }
             Section("General") {
+                Toggle("Show in the Dock and ⌘Tab while the Gloss window is open", isOn: $settings.dockWhileOpen)
                 Toggle("Launch at login", isOn: $launchAtLogin)
                     .onChange(of: launchAtLogin) { _, on in setLaunchAtLogin(on) }
                 if let loginError { Text(loginError).font(.caption).foregroundStyle(Theme.warn) }

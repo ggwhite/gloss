@@ -54,6 +54,14 @@ struct MainWindowView: View {
         .animation(Motion.spring, value: nav.page)
         .frame(minWidth: 900, minHeight: 640)
         .fontDesign(.rounded)
+        .background {
+            // ⌘W closes the window (a menu bar app has no File menu to provide it).
+            Button("Close") { NSApp.keyWindow?.performClose(nil) }
+                .keyboardShortcut("w", modifiers: .command)
+                .opacity(0)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+        }
     }
 
     // MARK: Sidebar
