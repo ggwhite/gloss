@@ -116,14 +116,19 @@ struct RollingNumber: View {
 }
 
 /// The violet wash, with its glows drifting slowly (about one loop every 24 s).
+/// It redraws 12 times a second, and not at all while its window can't be seen.
 struct AnimatedWash: View {
+    /// Redraws per second while visible. See MECHANICS.md ("Motion").
+    static let fps: Double = 12
+
     @Environment(\.accessibilityReduceMotion) private var reduce
+    @Environment(\.windowVisible) private var visible
 
     var body: some View {
         if reduce {
             Theme.wash
         } else {
-            TimelineView(.animation(minimumInterval: 1.0 / 20.0)) { context in
+            TimelineView(.animation(minimumInterval: 1.0 / Self.fps, paused: !visible)) { context in
                 let t = context.date.timeIntervalSinceReferenceDate / 24 * 2 * .pi
                 ZStack {
                     LinearGradient(colors: [Color(red: 0.07, green: 0.06, blue: 0.24).opacity(0.86),
@@ -144,18 +149,28 @@ struct AnimatedWash: View {
     }
 }
 
-/// Bobs a view up and down gently (the logo).
+/// Bobs a view up and down gently (the logo), only while its window can be seen.
 struct FloatingBob: ViewModifier {
     @State private var up = false
     @Environment(\.accessibilityReduceMotion) private var reduce
+    @Environment(\.windowVisible) private var visible
 
     func body(content: Content) -> some View {
         content
             .offset(y: up && !reduce ? -3 : 3)
-            .onAppear {
-                guard !reduce else { return }
-                withAnimation(.easeInOut(duration: 2.4).repeatForever(autoreverses: true)) { up = true }
-            }
+            .onAppear { setRunning(visible) }
+            .onChange(of: visible) { _, v in setRunning(v) }
+    }
+
+    private func setRunning(_ on: Bool) {
+        if on && !reduce {
+            withAnimation(.easeInOut(duration: 2.4).repeatForever(autoreverses: true)) { up = true }
+        } else {
+            // A plain change replaces the endless animation, so nothing keeps redrawing.
+            var t = Transaction(animation: nil)
+            t.disablesAnimations = true
+            withTransaction(t) { up = false }
+        }
     }
 }
 

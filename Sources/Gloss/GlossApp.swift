@@ -9,6 +9,7 @@ struct GlossApp: App {
                 .environmentObject(delegate.model)
                 .environmentObject(delegate.router)
                 .popoverChrome()
+                .trackWindowVisibility()
                 .preferredColorScheme(.dark)
                 .tint(Theme.accent)
         } label: {

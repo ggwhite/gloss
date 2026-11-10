@@ -230,7 +230,8 @@ final class FixController {
             p.becomesKeyOnlyIfNeeded = false
             p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
             let host = NSHostingView(rootView: FixView(model: model, close: { [weak self] in self?.close() },
-                                                       retry: { [weak self] in self?.close(); self?.trigger() }))
+                                                       retry: { [weak self] in self?.close(); self?.trigger() })
+                .trackWindowVisibility())
             host.sizingOptions = [.preferredContentSize]
             host.wantsLayer = true
             host.layer?.backgroundColor = .clear

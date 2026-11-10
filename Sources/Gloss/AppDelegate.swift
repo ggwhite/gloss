@@ -121,6 +121,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 .environmentObject(nav)
                 .tint(Theme.accent)
                 .background(AnimatedWash().ignoresSafeArea())
+                .trackWindowVisibility()
                 .background(WindowGlassBackground(material: .hudWindow).ignoresSafeArea())
             let host = NSHostingController(rootView: root)
             host.sizingOptions = [.minSize]
