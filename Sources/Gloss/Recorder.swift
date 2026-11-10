@@ -123,7 +123,7 @@ enum Recorder {
         case "overview":
             let m = Harness.demoModelWithHistory(clock)
             m.settings.welcomeDone = true
-            return Scene(size: CGSize(width: HomeView.width + 48, height: 760), duration: 3.4,
+            return Scene(size: CGSize(width: HomeView.width + 48, height: 900), duration: 3.4,
                          view: AnyView(popover(HomeView(startQuiz: {}).environmentObject(m).environmentObject(router))),
                          script: [])
         case "fix":

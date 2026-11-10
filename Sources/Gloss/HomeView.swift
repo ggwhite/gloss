@@ -16,6 +16,8 @@ struct PopoverRoot: View {
             }
         }
         .animation(.spring(response: 0.35, dampingFraction: 0.85), value: model.showingQuiz)
+        // The popover takes the content's own height (it resizes the window to match), never less.
+        .fixedSize(horizontal: false, vertical: true)
     }
 }
 
@@ -115,6 +117,9 @@ struct HomeView: View {
                     fixTile.appearIn(delay: Motion.stagger * 6)
                 }
             }
+            // Always the grid's own height: in the fixed-height menu popover the tiles were squeezed
+            // below their content and the bottom links spilled out of the frames.
+            .fixedSize(horizontal: false, vertical: true)
             Text("Today's Recommendation")
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(.secondary)
