@@ -487,6 +487,12 @@
       "group": "motion",
       "value": "Core Animation (runs in the window server)",
       "source": "measured: SwiftUI timelines used 4–7% CPU while visible; now ~0%"
+    },
+    {
+      "name": "overview tile layout",
+      "group": "overview",
+      "value": "3×2 grid, both tiles of a row the same height, actions on the bottom edge, min height 112 pt",
+      "source": "person's follow-up (blocks were different sizes)"
     }
   ]
 }

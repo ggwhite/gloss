@@ -21,6 +21,8 @@ struct PopoverRoot: View {
 
 /// One info tile: icon, title, coloured subtitle, content, and an optional text button at the bottom right.
 struct Tile<Content: View>: View {
+    /// Every tile is at least this tall, so the rows stay close in height. See MECHANICS.md.
+    static var minHeight: CGFloat { 112 }
     let icon: String
     var iconColors: [Color] = [Theme.blue, Theme.violet]
     let title: String
@@ -53,6 +55,8 @@ struct Tile<Content: View>: View {
                 }
             }
             content
+            // The action sits on the bottom edge, so tiles of one row line up even when their content differs.
+            Spacer(minLength: 0)
             if let actionTitle {
                 HStack {
                     Spacer()
@@ -64,7 +68,8 @@ struct Tile<Content: View>: View {
             }
         }
         .padding(12)
-        .frame(maxWidth: .infinity, alignment: .topLeading)
+        // Fill the grid cell: both tiles of a row get the row's height.
+        .frame(maxWidth: .infinity, minHeight: Self.minHeight, maxHeight: .infinity, alignment: .topLeading)
         .glassCard(radius: 18, strength: 0.03)
         .hoverLift(radius: 18)
         .onAppear { DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { bounced = true } }
@@ -95,15 +100,18 @@ struct HomeView: View {
                     .appearIn(delay: 0.03)
                     .transition(.asymmetric(insertion: .opacity, removal: .scale(scale: 0.9).combined(with: .opacity)))
             }
-            HStack(alignment: .top, spacing: 10) {
-                VStack(spacing: 10) {
+            // A real grid: the two tiles of each row share one height and line up with the rows above.
+            Grid(horizontalSpacing: 10, verticalSpacing: 10) {
+                GridRow {
                     dueTile.appearIn(delay: Motion.stagger * 1)
-                    streakTile.appearIn(delay: Motion.stagger * 3)
-                    mistakesTile.appearIn(delay: Motion.stagger * 5)
-                }
-                VStack(spacing: 10) {
                     accuracyTile.appearIn(delay: Motion.stagger * 2)
+                }
+                GridRow {
+                    streakTile.appearIn(delay: Motion.stagger * 3)
                     boxesTile.appearIn(delay: Motion.stagger * 4)
+                }
+                GridRow {
+                    mistakesTile.appearIn(delay: Motion.stagger * 5)
                     fixTile.appearIn(delay: Motion.stagger * 6)
                 }
             }

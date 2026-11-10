@@ -98,6 +98,7 @@ Every number that shapes how Gloss behaves. "request" means the person's build r
 |---|---|---|
 | First screen of the menu | overview; the quiz opens from "Start Quiz" (⌘[ goes back) | person's follow-up request |
 | Tiles | due now, accuracy (7 days), streak, Leitner boxes, mistakes (7 days, top 3), Fix my English | estimated |
+| Tile layout | a 3 × 2 grid: both tiles of a row share one height, action links sit on the bottom edge, every tile at least 112 pt | person's follow-up (blocks were different sizes) |
 | English Health | "Getting started" under 5 answers in 7 days; "Good" ≥ 80 % and ≤ 20 due; "Fair" ≥ 60 %; else "Needs practice" | estimated |
 | Streak | days in a row with at least one answer, ending today or yesterday | estimated |
 | Open Gloss from anywhere | ⌃⌥G shows the overview as a window at the top right (press again to hide) | person's follow-up; key estimated |
