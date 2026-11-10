@@ -14,7 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     lazy var model = AppModel(settings: settings, store: StateStore(url: StateStore.defaultURL))
     let router = Router()
     let notifier = Notifier()
-    let fix = FixController()
+    lazy var fix = FixController(settings: settings)
     let nav = Navigator()
     private lazy var watcher = VaultWatcher { [weak self] in self?.model.reloadVault() }
     private var timer: Timer?

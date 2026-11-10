@@ -15,13 +15,13 @@ struct SettingsView: View {
         Form {
             Section("How Gloss works") {
                 explain("tablecells", Theme.link, "Where the words come from",
-                        "The table under “## 拼字” in 單字.md (and “## 用字” if that deck is on): the 中文 column is the question, 正確拼法 is the answer, 記法 is the hint shown after a mistake. \(model.entries.count) cards right now. Gloss only reads the file.")
+                        "The table under “## 拼字” in 單字.md (and “## 用字” if that deck is on): the 中文 column is the question, 正確拼法 is the answer, 記法 is the hint shown after a mistake. \(model.entries.count) cards right now. Gloss only reads the file, unless “Save Fix My English mistakes to vault” is on.")
                 explain("checkmark.circle", Theme.good, "How an answer is checked — no AI",
                         "Your typing must match 正確拼法 exactly, ignoring upper/lower case and extra spaces. When it doesn't, a letter-by-letter comparison (edit distance) marks the letters that differ.")
                 explain("sparkles", Theme.violet, "When AI is used",
                         "Only for Fix My English: the text you select or paste goes to the claude command (Claude Code) on this Mac. The quiz, schedule, stats and pronunciation (the macOS voice) all run offline.")
             }
-            Section("Vault (read-only)") {
+            Section(settings.saveFixMistakes ? "Vault" : "Vault (read-only)") {
                 HStack {
                     TextField("Folder", text: $settings.vaultPath)
                     Button("Choose…", action: chooseFolder)
@@ -77,6 +77,9 @@ struct SettingsView: View {
                     Spacer()
                     HotKeyRecorder(combo: $settings.hotKey, defaultCombo: .default)
                 }
+                Toggle("Save Fix My English mistakes to vault", isOn: $settings.saveFixMistakes)
+                Text("Appends each mistake to \(Vault.mistakesFolder)/YYYY-MM-DD.md and updates the ## 拼字 / ## 用字 tables in \(Vault.vocabFile). Off: Gloss never writes to the vault.")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 HStack {
                     Image(systemName: trusted ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
                         .foregroundStyle(trusted ? Theme.good : Theme.warn)

@@ -51,6 +51,14 @@ Every number that shapes how Gloss behaves. "request" means the person's build r
 | Shortcut | ⌃⌥E (setting) | request |
 | Claude timeout | 30 s | request |
 | Wait for ⌘C copy | 0.6 s | estimated |
+| Save mistakes to vault | off (setting “Save Fix My English mistakes to vault”) | person's follow-up |
+| Mistake log file | `<vault>/錯誤紀錄/YYYY-MM-DD.md` (local date), append-only (opened with O_APPEND), created if missing; a newline is added first if the file does not end with one | person's follow-up |
+| Mistake line | ``- `original` → `fix` — 中文說明 #類別`` | person's follow-up |
+| Categories saved | 冠詞, 動詞形式, 單複數, 拼字, 用字, 介系詞, 句型; others and capitalization/punctuation-only changes are skipped (apostrophes `'` `’` are not punctuation here) | person's follow-up |
+| Dedupe | a line exactly equal (after trimming) to one already in today's file is not written; 單字.md only changes for lines written now | person's follow-up |
+| 單字.md update | 拼字 → `## 拼字` table, 用字 → `## 用字` table; existing row (正確拼法, case-insensitive, Markdown stripped): 次數 + 1, new wrong spelling added to 你打的 with `, `; new word: row `correct \| wrong \| 中文 \| 記法 \| 1` at the end of the table; proper nouns skipped | person's follow-up |
+| 單字.md safety | re-read right before writing; only targeted lines change; temp file in the same folder, then rename; heading/table missing, duplicate heading/row, not 5 columns or two tables (when adding) → no write, warning in the panel | person's follow-up |
+| Status line | “Saved N mistakes to 錯誤紀錄” (+ “updated N words in 單字.md”), “Already saved to 錯誤紀錄”, or the warning | person's follow-up |
 
 ## Stats
 

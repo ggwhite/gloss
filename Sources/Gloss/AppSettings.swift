@@ -26,6 +26,8 @@ final class AppSettings: ObservableObject {
     @Published var dockWhileOpen: Bool { didSet { defaults.set(dockWhileOpen, forKey: Keys.dockWhileOpen) } }
     /// After a wrong answer, type the right spelling this many times (0 turns it off).
     @Published var copyReps: Int { didSet { defaults.set(copyReps, forKey: Keys.copyReps) } }
+    /// Append Fix My English mistakes to 錯誤紀錄 and update 單字.md. Off by default.
+    @Published var saveFixMistakes: Bool { didSet { defaults.set(saveFixMistakes, forKey: Keys.saveFixMistakes) } }
 
     enum Keys {
         static let vaultPath = "vaultPath", spellingDeck = "deck.spelling", usageDeck = "deck.usage"
@@ -35,6 +37,7 @@ final class AppSettings: ObservableObject {
         static let speakOnAnswer = "speak.onAnswer", speakOnShow = "speak.onShow"
         static let openHotKey = "openHotKey", welcomeDone = "welcomeDone", dockWhileOpen = "dockWhileOpen"
         static let copyReps = "copyReps"
+        static let saveFixMistakes = "fix.saveToVault"
     }
 
     /// Defaults; see MECHANICS.md.
@@ -68,6 +71,7 @@ final class AppSettings: ObservableObject {
         welcomeDone = defaults.bool(forKey: Keys.welcomeDone)
         dockWhileOpen = defaults.object(forKey: Keys.dockWhileOpen) as? Bool ?? true
         copyReps = defaults.object(forKey: Keys.copyReps) as? Int ?? CopyDrill.defaultReps
+        saveFixMistakes = defaults.object(forKey: Keys.saveFixMistakes) as? Bool ?? false
     }
 
     var decks: Set<Deck> {

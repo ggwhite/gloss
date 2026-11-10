@@ -210,6 +210,7 @@ struct MainWindowView: View {
 
 /// Fix My English inside the window: type or paste text, press Fix.
 struct FixPage: View {
+    @EnvironmentObject var model: AppModel
     @StateObject private var fix = FixModel()
     @State private var text = ""
     @State private var task: Task<Void, Never>?
@@ -255,12 +256,14 @@ struct FixPage: View {
         guard !input.isEmpty else { return }
         task?.cancel()
         fix.copied = nil
+        fix.saveStatus = nil
         fix.phase = .asking(input)
         task = Task { @MainActor in
             do {
                 let r = try await ClaudeRunner.fix(input)
                 guard !Task.isCancelled else { return }
                 fix.phase = .done(input, r)
+                await fix.saveToVault(r, settings: model.settings)
             } catch {
                 guard !Task.isCancelled else { return }
                 fix.phase = .failed(error.localizedDescription, needsPermission: false)

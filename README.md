@@ -113,7 +113,7 @@ and its category. **Listen** reads it aloud; **Copy** puts it on the clipboard.
 | **Where the words come from** | The table under `## 拼字` in your `單字.md` (and `## 用字` if you turn that deck on). Nothing is generated. |
 | **How an answer is checked** | **No AI.** Your typing must equal the correct spelling, ignoring case and extra spaces. On a mistake, an edit-distance comparison marks the letters that differ. |
 | **When AI is used** | Only by **Fix My English**, which sends the text you select or paste to the `claude` command (Claude Code) on your Mac. |
-| **What runs offline** | The quiz, the schedule, stats, reminders and pronunciation. Gloss **never writes to your vault**. |
+| **What runs offline** | The quiz, the schedule, stats, reminders and pronunciation. Gloss **only reads your vault** — it writes to it only when you turn on *Save Fix My English mistakes to vault* (off by default). |
 
 ### Spaced repetition
 
@@ -161,6 +161,17 @@ Cells may use `**bold**`, backticks and `?`; Gloss strips the Markdown, and rows
 ```
 
 Categories: `#冠詞 #動詞形式 #單複數 #拼字 #用字 #介系詞 #句型`.
+
+**Saving Fix My English mistakes (opt-in).** With *Settings → Shortcuts → Save Fix My English mistakes to vault* on
+(off by default), each fix result is written to the vault:
+
+- Every mistake in one of the categories above is **appended** to `錯誤紀錄/YYYY-MM-DD.md` (today, local time) in the
+  line format above. The file is created if missing and never rewritten; a line already in today's file is not added
+  again, so the same result is saved once. Capitalization-only and punctuation-only mistakes are skipped (an apostrophe counts as a real change: `its` → `it's` is saved).
+- `#拼字` and `#用字` mistakes also update `單字.md` (proper nouns are skipped): an existing row (matched on 正確拼法,
+  ignoring case and Markdown) gets 次數 + 1 and the new wrong spelling in 你打的; a new word gets a row at the end of the
+  `## 拼字` / `## 用字` table with Claude's 中文 and 記法 and 次數 1. Only those lines change, and the file is replaced
+  atomically. If the heading or table is missing or ambiguous, `單字.md` is left alone and the panel shows a warning.
 
 ## ⌨️ Shortcuts
 

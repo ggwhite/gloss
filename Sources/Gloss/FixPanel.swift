@@ -14,6 +14,33 @@ final class FixModel: ObservableObject {
     }
     @Published var phase: Phase = .idle
     @Published var copied: String?
+    /// The result of saving the mistakes to the vault; nil when nothing was saved.
+    @Published var saveStatus: String?
+    @Published var saveWarning = false
+
+    /// Saves the mistakes of the shown result when the setting is on, then shows the status line.
+    func saveToVault(_ result: FixResult, settings: AppSettings?) async {
+        saveStatus = nil
+        saveWarning = false
+        guard let report = await FixVaultSaver.save(result, settings: settings), !Task.isCancelled else { return }
+        saveStatus = report.summary
+        saveWarning = !report.warnings.isEmpty
+    }
+}
+
+/// Runs `VaultWriter` one save at a time, off the main thread. See MECHANICS.md.
+enum FixVaultSaver {
+    private static let queue = DispatchQueue(label: "gloss.vault-writer")
+
+    @MainActor
+    static func save(_ result: FixResult, settings: AppSettings?) async -> VaultSaveReport? {
+        guard let settings, settings.saveFixMistakes, !result.mistakes.isEmpty else { return nil }
+        let root = Vault.resolve(settings.vaultPath)
+        let day = Day(Date(), calendar: .current)
+        return await withCheckedContinuation { done in
+            queue.async { done.resume(returning: VaultWriter.save(result, root: root, day: day)) }
+        }
+    }
 }
 
 struct FixView: View {
@@ -79,6 +106,14 @@ struct FixView: View {
                 resultBox(title: "Fixed", text: result.fixed, tint: Theme.good).appearIn(delay: 0.05)
                 resultBox(title: "Shorter", text: result.short, tint: Theme.blue).appearIn(delay: 0.15)
                 mistakes(result.mistakes).appearIn(delay: 0.25)
+                if let status = model.saveStatus {
+                    Label(status, systemImage: model.saveWarning ? "exclamationmark.triangle.fill" : "tray.and.arrow.down.fill")
+                        .font(.caption)
+                        .foregroundStyle(model.saveWarning ? Theme.warn : .secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .textSelection(.enabled)
+                        .padding(.horizontal, 4)
+                }
             case .failed(let message, let needsPermission):
                 Label(message, systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(Theme.warn)
@@ -177,12 +212,18 @@ final class KeyablePanel: NSPanel {
 @MainActor
 final class FixController {
     let model = FixModel()
+    private let settings: AppSettings?
     private var panel: NSPanel?
     private var task: Task<Void, Never>?
+
+    init(settings: AppSettings? = nil) {
+        self.settings = settings
+    }
 
     func trigger() {
         task?.cancel()
         model.copied = nil
+        model.saveStatus = nil
         model.phase = .copying
         task = Task { [weak self] in
             guard let self else { return }
@@ -205,6 +246,7 @@ final class FixController {
                 let result = try await ClaudeRunner.fix(text)
                 guard !Task.isCancelled else { return }
                 self.model.phase = .done(text, result)
+                await self.model.saveToVault(result, settings: self.settings)
             } catch {
                 guard !Task.isCancelled else { return }
                 self.model.phase = .failed(error.localizedDescription, needsPermission: false)
