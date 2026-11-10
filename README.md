@@ -53,10 +53,11 @@ The card shows the **Chinese meaning**, the first letter and one **box per lette
 Letters pop into the boxes as you type; **Enter** checks. A right answer bursts into
 sparks and the boxes turn mint one by one. A wrong one **shakes the card**, marks the
 letters you got wrong, shows your **memory hint** and brings the card back later in
-the round. The cursor stays in the answer field, so you never touch the mouse.
+the round. Then **type it 3 more times** while the answer is on screen: each letter turns mint
+or rose as you type, and three dots fill up. The cursor stays in the answer field, so you never touch the mouse.
 
 </td>
-<td><img src="assets/quiz.webp" alt="Quiz: type flumbrance letter by letter into the boxes, Enter, sparks and a green check; the next card slides in; type quintivel wrong, the card shakes and shows quintavel with the wrong letter in red and the hint; Enter to the next card" /></td>
+<td><img src="assets/quiz.webp" alt="Quiz: type flumbrance letter by letter into the boxes, Enter, sparks and a green check; the next card slides in; type quintivel wrong, the card shakes and shows quintavel with the wrong letter in red and the hint; retype it three times (one copy with a mistake turns a box red), the dots fill and the next card comes by itself" /></td>
 </tr>
 <tr>
 <td width="42%" valign="middle">

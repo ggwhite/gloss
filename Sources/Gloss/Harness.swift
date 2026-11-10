@@ -377,6 +377,8 @@ enum Harness {
                     steps.append(step)
                     typingCheck { typed in
                     steps.append(typed)
+                    drillCheck { drilled in
+                    steps.append(drilled)
                     let enc = JSONEncoder()
                     enc.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
                     let url = URL(fileURLWithPath: path)
@@ -384,6 +386,7 @@ enum Harness {
                     try? enc.encode(Report(steps: steps)).write(to: url)
                     for s in steps { print("\(s.passed ? "PASS" : "FAIL") \(s.step): \(s.detail)") }
                     exit(steps.allSatisfy(\.passed) ? 0 : 1)
+                    }
                     }
                 }
             }
@@ -476,6 +479,55 @@ enum Harness {
             }
         }
         afterFrames(30) { round(0) }
+    }
+
+    /// Wrong answer, then the copy drill through the text field: a bad copy does not count, three right
+    /// copies finish it, and the next card comes by itself.
+    static func drillCheck(done: @escaping (Step) -> Void) {
+        let clock = Clock(demoMorning())
+        let m = demoModel(clock)
+        m.settings.copyReps = 3
+        let host = NSHostingView(rootView: QuizView(width: 480, showsFooter: false).environmentObject(m).environmentObject(Router())
+            .environment(\.colorScheme, .dark))
+        host.frame.size = CGSize(width: 480, height: 640)
+        let w = KeyablePanel(contentRect: NSRect(origin: offscreen, size: host.frame.size),
+                             styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+        w.contentView = host
+        w.orderFrontRegardless()
+        w.makeKey()
+
+        func type(_ text: String) -> Bool {
+            guard let editor = w.firstResponder as? NSTextView, editor.isFieldEditor else { return false }
+            editor.insertText(text, replacementRange: editor.selectedRange())
+            editor.doCommand(by: #selector(NSResponder.insertNewline(_:)))
+            return true
+        }
+
+        afterFrames(30) {
+            guard let card = m.current else { done(Step(step: "copy-drill", passed: false, detail: "no card")); return }
+            let word = card.word
+            var notes: [String] = []
+            _ = type("x" + word)                                    // wrong answer
+            let started = m.drill?.required == 3 && m.answer.isEmpty
+            notes.append("wrong answer → drill of \(m.drill?.required ?? 0), field cleared \(m.answer.isEmpty)")
+            afterFrames(12) {
+                _ = type(String(word.dropLast()))                    // a copy with a mistake
+                let missOK = m.drill?.done == 0 && m.drillMisses == 1
+                notes.append("bad copy → \(m.drill?.done ?? -1) counted, \(m.drillMisses) miss")
+                afterFrames(12) {
+                    var typedAll = true
+                    for _ in 0..<3 { typedAll = typedAll && type(word) }
+                    let finished = m.drill?.isFinished == true
+                    notes.append("3 right copies → finished \(finished)")
+                    afterFrames(Int(AppModel.drillDonePause * 60) + 24) {
+                        let moved = m.current != card && m.phase == .asking && m.drill == nil
+                        notes.append("then the next card by itself: \(moved ? m.current?.word ?? "-" : "no")")
+                        done(Step(step: "copy-drill", passed: started && missOK && typedAll && finished && moved,
+                                  detail: "“\(word)”: " + notes.joined(separator: "; ")))
+                    }
+                }
+            }
+        }
     }
 
     // MARK: Run loop helpers

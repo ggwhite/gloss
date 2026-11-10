@@ -144,8 +144,47 @@ final class AppModel: ObservableObject {
     func submit() {
         switch phase {
         case .asking: check()
-        case .wrong, .correct: next()
+        case .wrong: copyOrNext()
+        case .correct: next()
         case .done: startSession()
+        }
+    }
+
+    // MARK: Copy drill
+
+    /// After a wrong answer: the right spelling to type `settings.copyReps` times (nil when off or skipped).
+    @Published private(set) var drill: CopyDrill?
+    /// Goes up on each copy with a mistake (the card shakes).
+    @Published private(set) var drillMisses = 0
+
+    /// How long "Got it" shows after the last copy before the next card. See MECHANICS.md.
+    static let drillDonePause: Double = 0.6
+
+    /// Enter in the wrong-answer view: counts a copy, or moves on when the drill is off, done or skipped
+    /// (Enter on an empty field).
+    private func copyOrNext() {
+        guard var d = drill, !d.isFinished else { next(); return }
+        let result = d.submit(answer)
+        drill = d
+        switch result {
+        case .empty:
+            next()
+        case .wrong:
+            drillMisses += 1
+            answer = ""
+        case .counted:
+            answer = ""
+            if settings.speakOnAnswer { Pronouncer.shared.say(d.word) }
+        case .finished:
+            answer = ""
+            if settings.speakOnAnswer { Pronouncer.shared.say(d.word) }
+            let serial = cardSerial
+            let work = DispatchWorkItem { [weak self] in
+                guard let self, case .wrong = self.phase, self.cardSerial == serial else { return }
+                self.next()
+            }
+            advanceWork = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + Self.drillDonePause, execute: work)
         }
     }
 
@@ -172,6 +211,10 @@ final class AppModel: ObservableObject {
             DispatchQueue.main.asyncAfter(deadline: .now() + Self.correctPause, execute: work)
         } else {
             phase = .wrong(outcome)
+            if settings.copyReps > 0 {
+                drill = CopyDrill(word: outcome.entry.word, required: min(settings.copyReps, CopyDrill.maxReps))
+                answer = "" // a fresh field for the copies
+            }
         }
     }
 
@@ -192,6 +235,7 @@ final class AppModel: ObservableObject {
     private func syncFromSession() {
         advanceWork?.cancel()
         advanceWork = nil
+        drill = nil
         let previous = current
         current = session?.current
         cardSerial += 1

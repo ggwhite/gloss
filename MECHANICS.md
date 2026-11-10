@@ -29,7 +29,8 @@ Every number that shapes how Gloss behaves. "request" means the person's build r
 | Answer check | trim, collapse spaces, case-insensitive | request |
 | Wrong card requeue | 3 cards later (or at the end) | estimated |
 | Green check pause | 0.7 s, then the next card by itself (tracked by card, cancelled if Enter, typing or Skip moved on first); the field is cleared for the new card | person's follow-up (it did not always move on) |
-| Enter on a wrong answer | next card | estimated |
+| Enter on a wrong answer | with the copy drill on: counts a copy; on an empty field: skips to the next card | person's follow-up |
+| Copy drill after a mistake | type the right spelling 3 times (setting 0–5; 0 = off); boxes show each letter right (mint) or wrong (rose) as you type; a copy with a mistake doesn't count and shakes the card; the next card comes 0.6 s after the last copy; it doesn't change the schedule | person's follow-up |
 | Answer field | keeps the cursor for every card (no clicking); only the question slides | person's follow-up |
 | Typing during the green check | goes to the next card at once and keeps the letters | estimated |
 | Popover width | 380 pt | estimated |

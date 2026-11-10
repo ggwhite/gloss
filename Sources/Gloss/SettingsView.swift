@@ -36,6 +36,9 @@ struct SettingsView: View {
                 Toggle("Spelling (## 拼字) — \(model.snapshot.decks[.spelling]?.count ?? 0) cards", isOn: $settings.spellingDeck)
                 Toggle("Word choice (## 用字) — \(model.snapshot.decks[.usage]?.count ?? 0) cards", isOn: $settings.usageDeck)
                 Stepper("New cards per day: \(settings.newPerDay)", value: $settings.newPerDay, in: 0...200, step: 5)
+                Stepper(settings.copyReps == 0 ? "Retype after a mistake: off"
+                                               : "Retype after a mistake: \(settings.copyReps) times",
+                        value: $settings.copyReps, in: 0...CopyDrill.maxReps)
             }
             Section("Pronunciation") {
                 Toggle("Say the word after each answer", isOn: $settings.speakOnAnswer)

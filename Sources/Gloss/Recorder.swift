@@ -107,11 +107,17 @@ enum Recorder {
             script += typing("flumbrance", into: m, at: 0.6)
             script.append((1.85, { m.submit() }))             // right → sparks, then the next card slides in
             script += typing("quintivel", into: m, at: 3.2)
-            script.append((4.4, { m.submit() }))              // wrong → shake, right spelling, hint
-            script.append((7.0, { m.submit() }))              // Enter → next card
-            script += typing("zorbitude", into: m, at: 7.6)
-            script.append((8.8, { m.submit() }))
-            return Scene(size: CGSize(width: HomeView.width + 48, height: 560), duration: 10.2,
+            script.append((4.4, { m.submit() }))              // wrong → shake, right spelling, hint, copy drill
+            script += typing("quintaval", into: m, at: 6.0)   // a copy with a mistake: red boxes, shake
+            script.append((7.1, { m.submit() }))
+            for (n, t) in [7.5, 8.8, 10.1].enumerated() {       // three right copies fill the dots
+                script += typing("quintavel", into: m, at: t, every: 0.09)
+                script.append((t + 0.95, { m.submit() }))
+                _ = n
+            }
+            script += typing("zorbitude", into: m, at: 12.0)  // the next card came by itself
+            script.append((13.2, { m.submit() }))
+            return Scene(size: CGSize(width: HomeView.width + 48, height: 660), duration: 14.6,
                          view: AnyView(popover(QuizView(showsFooter: true).environmentObject(m).environmentObject(router))),
                          script: script)
         case "overview":

@@ -51,6 +51,11 @@ struct QuizView: View {
             focusField()
         }
         .onChange(of: model.cardSerial) { _, _ in focusField() }
+        .onChange(of: model.drillMisses) { _, _ in
+            if !reduce { withAnimation(.linear(duration: 0.45)) { shakes += 1 } }
+            focusField()
+        }
+        .onChange(of: model.drill?.done) { _, _ in focusField() }
         .onChange(of: model.phase) { _, phase in
             if phase == .asking { focusField() }
             switch phase {
@@ -166,7 +171,8 @@ struct QuizView: View {
             .accessibilityElement(children: .combine)
             .accessibilityLabel(CardPrompt.text(for: entry))
 
-            LetterBoxes(word: entry.word, typed: isSolved(entry) ? entry.word : model.answer, solved: isSolved(entry))
+            LetterBoxes(word: entry.word, typed: boxText(entry), solved: isSolved(entry) || (model.drill?.isFinished ?? false),
+                        matches: model.drill.map { _ in CardPrompt.letterMatches(for: entry.word, typed: model.answer) })
             }
             // Only the question slides when the card changes; the text field below stays, and keeps the cursor.
             .id(model.cardSerial)
@@ -186,7 +192,7 @@ struct QuizView: View {
                 }
                 .transition(.scale(scale: 0.8).combined(with: .opacity))
             case .wrong(let outcome):
-                WrongAnswerView(outcome: outcome)
+                WrongAnswerView(outcome: outcome, drill: model.drill)
                     .transition(.move(edge: .top).combined(with: .opacity))
             default:
                 EmptyView()
@@ -194,7 +200,7 @@ struct QuizView: View {
 
             HStack(spacing: 8) {
                 Image(systemName: "keyboard").foregroundStyle(.secondary)
-                TextField("Type the spelling ↩", text: $model.answer)
+                TextField(fieldPrompt(entry), text: $model.answer)
                     .textFieldStyle(.plain)
                     .font(.system(size: 18, weight: .medium, design: .monospaced))
                     .autocorrectionDisabled()
@@ -231,6 +237,18 @@ struct QuizView: View {
                 SparkBurst().id(bursts)
             }
         }
+    }
+
+    /// What the letter boxes show: the solved word, the finished copies, or what is being typed.
+    private func boxText(_ entry: VocabEntry) -> String {
+        if isSolved(entry) || (model.drill?.isFinished ?? false) { return entry.word }
+        return model.answer
+    }
+
+    private func fieldPrompt(_ entry: VocabEntry) -> String {
+        guard let d = model.drill else { return "Type the spelling ↩" }
+        if d.isFinished { return "Got it ↩" }
+        return "Type “\(d.word)” again (\(d.done + 1) of \(d.required)) ↩"
     }
 
     private func isSolved(_ entry: VocabEntry) -> Bool {
@@ -339,6 +357,8 @@ struct LetterBoxes: View {
     let word: String
     let typed: String
     var solved = false
+    /// During the copy drill: per box, whether the typed letter is right (nil: not typed yet).
+    var matches: [Bool?]? = nil
 
     /// Largest box width; boxes shrink to fit long words. See MECHANICS.md ("Motion").
     static let maxBox: CGFloat = 30
@@ -388,8 +408,8 @@ struct LetterBoxes: View {
             Color.clear.frame(width: size * 0.35, height: size * 1.3)
         default:
             ZStack {
-                shape.fill(fill(slot))
-                shape.stroke(stroke(slot), lineWidth: 1)
+                shape.fill(fill(slot, index))
+                shape.stroke(stroke(slot, index), lineWidth: 1)
                 switch slot {
                 case .typed(let c):
                     Text(String(c))
@@ -413,16 +433,23 @@ struct LetterBoxes: View {
         }
     }
 
-    private func fill(_ slot: LetterSlot) -> Color {
+    private func match(_ index: Int) -> Bool? {
+        guard let matches, index < matches.count else { return nil }
+        return matches[index]
+    }
+
+    private func fill(_ slot: LetterSlot, _ index: Int) -> Color {
         if solved { return Theme.good.opacity(0.55) }
+        if let m = match(index) { return m ? Theme.good.opacity(0.45) : Theme.bad.opacity(0.6) }
         switch slot {
         case .typed: return Theme.accent.opacity(0.45)
         default: return Color.white.opacity(0.06)
         }
     }
 
-    private func stroke(_ slot: LetterSlot) -> Color {
+    private func stroke(_ slot: LetterSlot, _ index: Int) -> Color {
         if solved { return Theme.good }
+        if let m = match(index) { return m ? Theme.good : Theme.bad }
         switch slot {
         case .typed: return Theme.accent.opacity(0.9)
         case .hint: return Theme.link.opacity(0.5)
@@ -434,6 +461,7 @@ struct LetterBoxes: View {
 /// The right spelling with wrong letters marked, what was typed, and the memory hint.
 struct WrongAnswerView: View {
     let outcome: AnswerOutcome
+    var drill: CopyDrill? = nil
     @State private var popped = false
 
     var body: some View {
@@ -460,9 +488,15 @@ struct WrongAnswerView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .glass(RoundedRectangle(cornerRadius: 20, style: .continuous), tint: Theme.warn, strength: 0.16)
             }
-            Text("This card comes back later in this round.")
+            if let drill {
+                DrillProgress(drill: drill)
+            }
+            Text(drill == nil || drill!.isFinished
+                 ? "This card comes back later in this round."
+                 : "Enter on an empty field skips. This card comes back later in this round.")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .onAppear { withAnimation(Motion.spring.delay(0.15)) { popped = true } }
     }
@@ -566,5 +600,40 @@ struct PracticeMenu: View {
         .buttonStyle(.plain)
         .disabled(!enabled)
         .opacity(enabled ? 1 : 0.45)
+    }
+}
+
+/// "Type it 3 times" with one dot per copy; dots fill as right copies are typed.
+struct DrillProgress: View {
+    let drill: CopyDrill
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: drill.isFinished ? "checkmark.seal.fill" : "pencil.line")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(drill.isFinished ? Theme.good : Theme.link)
+                .symbolEffect(.bounce, value: drill.done)
+            Text(drill.isFinished ? "Got it — next card" : "Type it \(drill.required) times to remember it")
+                .font(.callout.weight(.semibold))
+                .contentTransition(.opacity)
+            Spacer(minLength: 0)
+            HStack(spacing: 6) {
+                ForEach(0..<drill.required, id: \.self) { i in
+                    let filled = i < drill.done
+                    Circle()
+                        .fill(filled ? Theme.good : Color.white.opacity(0.14))
+                        .overlay(Circle().stroke(filled ? Theme.good : Color.white.opacity(0.3), lineWidth: 1))
+                        .frame(width: 12, height: 12)
+                        .scaleEffect(filled ? 1.0 : 0.85)
+                        .shadow(color: Theme.good.opacity(filled ? 0.7 : 0), radius: filled ? 5 : 0)
+                        .animation(Motion.spring, value: filled)
+                }
+            }
+            .accessibilityLabel("\(drill.done) of \(drill.required) copies")
+        }
+        .padding(.horizontal, 14).padding(.vertical, 10)
+        .glass(RoundedRectangle(cornerRadius: 18, style: .continuous),
+               tint: drill.isFinished ? Theme.good : Theme.link, strength: 0.12)
+        .animation(Motion.spring, value: drill.done)
     }
 }

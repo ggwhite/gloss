@@ -455,6 +455,26 @@
       "value": 0.7,
       "unit": "s",
       "source": "person's follow-up (sometimes did not move on); cancelled when the card changes another way"
+    },
+    {
+      "name": "retype after a mistake",
+      "group": "quiz",
+      "value": 3,
+      "unit": "times",
+      "source": "person's follow-up (practise a wrong word a few times); setting 0–5, 0 = off"
+    },
+    {
+      "name": "copy with a mistake",
+      "group": "quiz",
+      "value": "does not count; card shakes; boxes show right/wrong letters live",
+      "estimated": true
+    },
+    {
+      "name": "after the last copy",
+      "group": "quiz",
+      "value": 0.6,
+      "unit": "s",
+      "estimated": true
     }
   ]
 }
