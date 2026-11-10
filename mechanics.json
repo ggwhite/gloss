@@ -475,6 +475,18 @@
       "value": 0.6,
       "unit": "s",
       "estimated": true
+    },
+    {
+      "name": "decoration while a window is hidden or in the background",
+      "group": "motion",
+      "value": "paused (0% CPU)",
+      "source": "person's follow-up (CPU too high); measured by self-test idle-cpu"
+    },
+    {
+      "name": "wash drift and logo bob",
+      "group": "motion",
+      "value": "Core Animation (runs in the window server)",
+      "source": "measured: SwiftUI timelines used 4–7% CPU while visible; now ~0%"
     }
   ]
 }

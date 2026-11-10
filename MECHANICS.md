@@ -115,7 +115,8 @@ All of it turns off when macOS "Reduce motion" is on.
 | Next card | slides in from the right | estimated |
 | Sidebar | the selected highlight slides to the new page; pages fade in | estimated |
 | Speaker buttons | ripple while the word is spoken | estimated |
-| Background | the violet glows drift slowly (24 s loop) | estimated |
+| Background | the violet glows drift slowly (24/30/36 s loops), run by Core Animation; paused while the window is hidden, closed or in the background | person's follow-up (CPU) |
+| CPU | idle with windows closed: 0.0 %; window in use: about 0.1 % (self-test step idle-cpu, `--cpu-check`) — was 8–10 % | person's follow-up, measured |
 | Spring | response 0.42 s, damping 0.78 (quick taps 0.28 s) | estimated |
 
 ## Extra practice

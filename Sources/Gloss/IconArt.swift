@@ -91,14 +91,30 @@ struct IconArt: View {
     }
 }
 
-/// The app icon at any size, for logos inside the app.
+/// The app icon at any size, for logos inside the app. Drawn once per size into an image: the vector art
+/// has blurred shadows that are costly to draw again on every frame of the floating logo.
 struct AppIconView: View {
     var size: CGFloat
 
     var body: some View {
-        IconArt()
-            .scaleEffect(size / IconArt.canvas * 1.2) // the icon tile fills ~80 % of its canvas
+        Image(nsImage: Self.image(size: size))
+            .resizable()
+            .interpolation(.high)
             .frame(width: size, height: size)
+    }
+
+    @MainActor private static var cache: [CGFloat: NSImage] = [:]
+
+    @MainActor static func image(size: CGFloat) -> NSImage {
+        if let img = cache[size] { return img }
+        let scale = max(NSScreen.main?.backingScaleFactor ?? 2, 2)
+        let r = ImageRenderer(content: IconArt()
+            .scaleEffect(size / IconArt.canvas * 1.2)
+            .frame(width: size, height: size))
+        r.scale = scale
+        let img = r.nsImage ?? NSImage(size: NSSize(width: size, height: size))
+        cache[size] = img
+        return img
     }
 }
 

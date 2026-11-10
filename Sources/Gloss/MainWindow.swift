@@ -70,7 +70,7 @@ struct MainWindowView: View {
         VStack(alignment: .leading, spacing: 4) {
             Color.clear.frame(height: 30) // room for the window buttons
             HStack(spacing: 10) {
-                AppIconView(size: 40).floating()
+                FloatingAppIcon(size: 40)
                 VStack(alignment: .leading, spacing: 0) {
                     Text("Gloss").font(.system(size: 17, weight: .bold))
                     Text("English from your notes").font(.caption2).foregroundStyle(.secondary)

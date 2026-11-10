@@ -8,7 +8,8 @@ import SwiftUI
 private struct WindowVisibleKey: EnvironmentKey { static let defaultValue = true }
 
 extension EnvironmentValues {
-    /// False while the window is closed, hidden, minimized or fully covered.
+    /// True only while the window is on screen, not covered, and the one being used (key).
+    /// False while it is closed, hidden, minimized, covered, or in the background behind another app.
     var windowVisible: Bool {
         get { self[WindowVisibleKey.self] }
         set { self[WindowVisibleKey.self] = newValue }
@@ -25,6 +26,8 @@ private struct VisibilityReader: NSViewRepresentable {
     final class ReaderView: NSView {
         var onChange: (Bool) -> Void
         private var observers: [NSObjectProtocol] = []
+        /// Ordering a window out sends no notification, so its `isVisible` is watched too.
+        private var visibleWatch: NSKeyValueObservation?
 
         init(onChange: @escaping (Bool) -> Void) {
             self.onChange = onChange
@@ -36,9 +39,14 @@ private struct VisibilityReader: NSViewRepresentable {
             super.viewDidMoveToWindow()
             observers.forEach(NotificationCenter.default.removeObserver)
             observers = []
+            visibleWatch = nil
             guard let window else { report(false); return }
+            visibleWatch = window.observe(\.isVisible, options: [.new]) { [weak self] _, _ in
+                DispatchQueue.main.async { self?.report(nil) }
+            }
             for name in [NSWindow.didChangeOcclusionStateNotification, NSWindow.willCloseNotification,
-                         NSWindow.didMiniaturizeNotification, NSWindow.didDeminiaturizeNotification] {
+                         NSWindow.didMiniaturizeNotification, NSWindow.didDeminiaturizeNotification,
+                         NSWindow.didBecomeKeyNotification, NSWindow.didResignKeyNotification] {
                 observers.append(NotificationCenter.default.addObserver(forName: name, object: window, queue: .main) { [weak self] note in
                     MainActor.assumeIsolated {
                         self?.report(note.name == NSWindow.willCloseNotification ? false : nil)
@@ -50,8 +58,15 @@ private struct VisibilityReader: NSViewRepresentable {
 
         deinit { observers.forEach(NotificationCenter.default.removeObserver) }
 
+        /// For measuring only (`--cpu-check` with GLOSS_ASSUME_IN_USE=1): any shown window counts as in use,
+        /// so the cost of the effects while someone is looking can be measured without taking focus.
+        static let assumeInUse = ProcessInfo.processInfo.environment["GLOSS_ASSUME_IN_USE"] != nil
+
         private func report(_ forced: Bool?) {
-            let visible = forced ?? (window.map { $0.isVisible && $0.occlusionState.contains(.visible) } ?? false)
+            let visible = forced ?? (window.map {
+                Self.assumeInUse ? $0.isVisible
+                    : $0.isVisible && $0.occlusionState.contains(.visible) && $0.isKeyWindow
+            } ?? false)
             onChange(visible)
         }
     }

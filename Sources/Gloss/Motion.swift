@@ -116,18 +116,23 @@ struct RollingNumber: View {
 }
 
 /// The violet wash, with its glows drifting slowly (about one loop every 24 s).
-/// It redraws 12 times a second, and not at all while its window can't be seen.
+/// It redraws 10 times a second, and not at all while its window is hidden or in the background.
 struct AnimatedWash: View {
     /// Redraws per second while visible. See MECHANICS.md ("Motion").
-    static let fps: Double = 12
+    static let fps: Double = 10
 
     @Environment(\.accessibilityReduceMotion) private var reduce
     @Environment(\.windowVisible) private var visible
+    @Environment(\.simulatedGlass) private var offscreen
 
     var body: some View {
         if reduce {
             Theme.wash
+        } else if !offscreen {
+            // Real windows: Core Animation drifts the glows, at no CPU cost to Gloss.
+            LayerWash(running: visible)
         } else {
+            // Screenshots and recordings draw frame by frame off-screen, which needs the SwiftUI version.
             TimelineView(.animation(minimumInterval: 1.0 / Self.fps, paused: !visible)) { context in
                 let t = context.date.timeIntervalSinceReferenceDate / 24 * 2 * .pi
                 ZStack {
@@ -150,26 +155,19 @@ struct AnimatedWash: View {
 }
 
 /// Bobs a view up and down gently (the logo), only while its window can be seen.
+/// Driven by a pausable TimelineView: an endless SwiftUI animation keeps redrawing even after it is "stopped".
 struct FloatingBob: ViewModifier {
-    @State private var up = false
     @Environment(\.accessibilityReduceMotion) private var reduce
     @Environment(\.windowVisible) private var visible
 
     func body(content: Content) -> some View {
-        content
-            .offset(y: up && !reduce ? -3 : 3)
-            .onAppear { setRunning(visible) }
-            .onChange(of: visible) { _, v in setRunning(v) }
-    }
-
-    private func setRunning(_ on: Bool) {
-        if on && !reduce {
-            withAnimation(.easeInOut(duration: 2.4).repeatForever(autoreverses: true)) { up = true }
+        if reduce {
+            content
         } else {
-            // A plain change replaces the endless animation, so nothing keeps redrawing.
-            var t = Transaction(animation: nil)
-            t.disablesAnimations = true
-            withTransaction(t) { up = false }
+            TimelineView(.animation(minimumInterval: 1.0 / 20.0, paused: !visible)) { context in
+                let t = context.date.timeIntervalSinceReferenceDate
+                content.offset(y: 3 * sin(t * 2 * .pi / 4.8))
+            }
         }
     }
 }

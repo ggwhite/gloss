@@ -148,9 +148,8 @@ struct HomeView: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
-            AppIconView(size: 58)
+            FloatingAppIcon(size: 58)
                 .shadow(color: Theme.blue.opacity(0.5), radius: 12, y: 4)
-                .floating()
         }
         .padding(.horizontal, 6)
         .padding(.top, 4)

@@ -1,4 +1,5 @@
 import AppKit
+import QuartzCore
 import GlossCore
 import SwiftUI
 
@@ -379,6 +380,8 @@ enum Harness {
                     steps.append(typed)
                     drillCheck { drilled in
                     steps.append(drilled)
+                    idleCpuCheck { cpu in
+                    steps.append(cpu)
                     let enc = JSONEncoder()
                     enc.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
                     let url = URL(fileURLWithPath: path)
@@ -386,6 +389,7 @@ enum Harness {
                     try? enc.encode(Report(steps: steps)).write(to: url)
                     for s in steps { print("\(s.passed ? "PASS" : "FAIL") \(s.step): \(s.detail)") }
                     exit(steps.allSatisfy(\.passed) ? 0 : 1)
+                    }
                     }
                     }
                 }
@@ -524,6 +528,70 @@ enum Harness {
                         notes.append("then the next card by itself: \(moved ? m.current?.word ?? "-" : "no")")
                         done(Step(step: "copy-drill", passed: started && missOK && typedAll && finished && moved,
                                   detail: "“\(word)”: " + notes.joined(separator: "; ")))
+                    }
+                }
+            }
+        }
+    }
+
+    /// `--cpu-check`: only the idle-CPU measurement (GLOSS_HOLD=1 waits 20 s after hiding, for sampling).
+    static func runCpuCheck() {
+        runApp {
+            idleCpuCheck { step in
+                print("\(step.passed ? "PASS" : "FAIL") \(step.step): \(step.detail)")
+                let hold = ProcessInfo.processInfo.environment["GLOSS_HOLD"] != nil ? 20.0 : 0
+                DispatchQueue.main.asyncAfter(deadline: .now() + hold) { exit(step.passed ? 0 : 1) }
+            }
+        }
+    }
+
+    /// CPU time this process used, in seconds (user + system).
+    static func cpuSeconds() -> Double {
+        var u = rusage()
+        getrusage(RUSAGE_SELF, &u)
+        return Double(u.ru_utime.tv_sec) + Double(u.ru_utime.tv_usec) / 1e6
+            + Double(u.ru_stime.tv_sec) + Double(u.ru_stime.tv_usec) / 1e6
+    }
+
+    /// The main window with its drifting wash and floating logo: shown (nearly invisible, never clickable),
+    /// then hidden as when it is closed. Measures CPU in both states; hidden must be close to zero.
+    static func idleCpuCheck(done: @escaping (Step) -> Void) {
+        // Tear down the earlier steps' test windows first, so only this window is measured.
+        for old in NSApp.windows {
+            old.contentView = nil
+            old.orderOut(nil)
+        }
+        let m = demoModelWithHistory(Clock(demoMorning()))
+        m.settings.welcomeDone = true
+        let host = NSHostingView(rootView: MainWindowView().environmentObject(m).environmentObject(Router())
+            .environmentObject(Navigator()).background(AnimatedWash()).trackWindowVisibility()
+            .environment(\.colorScheme, .dark))
+        host.frame.size = CGSize(width: 900, height: 640)
+        let screen = NSScreen.main?.visibleFrame ?? .zero
+        let w = KeyablePanel(contentRect: NSRect(x: screen.minX, y: screen.minY, width: 900, height: 640),
+                             styleMask: [.borderless], backing: .buffered, defer: false)
+        w.contentView = host
+        w.alphaValue = 0.01          // on screen so it counts as visible, but not noticeable
+        w.ignoresMouseEvents = true
+        w.level = .normal
+        w.orderFrontRegardless()     // in front and key, as when the person is using it (1% opaque, no clicks or keys)
+        w.makeKey()
+
+        func measure(_ seconds: Double, _ then: @escaping (Double) -> Void) {
+            let t0 = cpuSeconds(), start = Date()
+            DispatchQueue.main.asyncAfter(deadline: .now() + seconds) {
+                then((cpuSeconds() - t0) / Date().timeIntervalSince(start) * 100)
+            }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            let keyWhenShown = w.isKeyWindow && w.occlusionState.contains(.visible)
+            measure(4) { shown in
+                w.orderOut(nil)                       // what closing the window does
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    measure(6) { hidden in
+                        done(Step(step: "idle-cpu", passed: hidden < 1.5,
+                                  detail: String(format: "main window in use (key: %@): %.1f%% CPU; after it is closed: %.1f%% CPU (must be under 1.5%%)",
+                                                 keyWhenShown ? "yes" : "no", shown, hidden)))
                     }
                 }
             }
