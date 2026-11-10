@@ -5,6 +5,8 @@ import SwiftUI
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    /// The running delegate (SwiftUI wraps it, so NSApp.delegate is not this object).
+    private(set) static weak var current: AppDelegate?
     /// Seconds between due/nudge checks and the fallback vault poll. See MECHANICS.md.
     static let tick: TimeInterval = 60
 
@@ -19,6 +21,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var bag: Set<AnyCancellable> = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        AppDelegate.current = self
         NSApp.setActivationPolicy(.accessory)
         NSApp.appearance = Theme.darkAppearance
         router.showStats = { [weak self] in self?.open(.stats) }

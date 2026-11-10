@@ -18,8 +18,19 @@ enum PopoverInspector {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             guard let button = statusButton() else { write("no status button", to: path); exit(1) }
             button.performClick(nil)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                var out = ""
+            var measured = ""
+            let pop = { NSApp.windows.first(where: { String(describing: type(of: $0)).contains("MenuBarExtra") }) }
+            let note = { (label: String) in
+                if let w = pop() { measured += "\(label) frame=\(w.frame) top=\(w.frame.maxY)\n" }
+            }
+            let switching = CommandLine.arguments.contains("--switch-quiz")
+            if switching {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { note("OVERVIEW"); AppDelegate.current?.model.showingQuiz = true }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { note("QUIZ    "); AppDelegate.current?.model.showingQuiz = false }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3.2) { note("BACK    ") }
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + (switching ? 3.6 : 1.0)) {
+                var out = measured
                 for w in NSApp.windows where w.isVisible {
                     out += "WINDOW \(type(of: w)) frame=\(w.frame) opaque=\(w.isOpaque) bg=\(String(describing: w.backgroundColor)) style=\(w.styleMask.rawValue) shadow=\(w.hasShadow) level=\(w.level.rawValue)\n"
                     if let frameView = w.contentView?.superview { dump(frameView, depth: 1, into: &out) }

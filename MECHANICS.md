@@ -78,6 +78,7 @@ Every number that shapes how Gloss behaves. "request" means the person's build r
 | Accent | blue-violet #7D70FF; also blue #5494FF and violet #B06BFF | person's follow-up request; shades estimated |
 | Background tone | navy #0D0F2B → plum #24124A over the glass | person's follow-up request; shades estimated |
 | Right / wrong / hint colours | mint #61EBD6 / rose #FF669E / amber #FFBD6B | estimated (chosen to sit with blue-violet) |
+| Menu popover height | the popover window resizes to its content (overview ↔ quiz) with its top kept under the menu bar | person's follow-up (quiz floated with a gap above it) |
 | Menu popover corners | the whole popover window is clipped to 22 pt rounded corners, with a light edge | person's follow-up (square corners looked broken) |
 | App icon | blue-violet 824 pt rounded tile, two frosted flashcards, "Aa" with spelling blanks, mint check | person's follow-up |
 | Card corner radius | 30 pt (panels 34 pt, text field and buttons fully round) | person's follow-up request; sizes estimated |
