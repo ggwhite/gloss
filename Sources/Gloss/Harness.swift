@@ -401,7 +401,7 @@ enum Harness {
             .environment(\.colorScheme, .dark))
         host.frame.size = CGSize(width: 480, height: 520)
         let w = KeyablePanel(contentRect: NSRect(origin: offscreen, size: host.frame.size),
-                             styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+                             styleMask: [.borderless], backing: .buffered, defer: false)
         w.contentView = host
         w.orderFrontRegardless()
         w.makeKey()
@@ -448,7 +448,7 @@ enum Harness {
             .environment(\.colorScheme, .dark))
         host.frame.size = CGSize(width: 480, height: 560)
         let w = KeyablePanel(contentRect: NSRect(origin: offscreen, size: host.frame.size),
-                             styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+                             styleMask: [.borderless], backing: .buffered, defer: false)
         w.contentView = host
         w.orderFrontRegardless()
         w.makeKey()
@@ -491,7 +491,7 @@ enum Harness {
             .environment(\.colorScheme, .dark))
         host.frame.size = CGSize(width: 480, height: 640)
         let w = KeyablePanel(contentRect: NSRect(origin: offscreen, size: host.frame.size),
-                             styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+                             styleMask: [.borderless], backing: .buffered, defer: false)
         w.contentView = host
         w.orderFrontRegardless()
         w.makeKey()

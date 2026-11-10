@@ -32,7 +32,7 @@ enum Recorder {
                 .environment(\.colorScheme, .dark))
             host.frame.size = scene.size
             let window = KeyablePanel(contentRect: NSRect(origin: Harness.offscreen, size: scene.size),
-                                      styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+                                      styleMask: [.borderless], backing: .buffered, defer: false)
             window.appearance = Theme.darkAppearance
             window.contentView = host
             window.orderFrontRegardless()
