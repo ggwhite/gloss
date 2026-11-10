@@ -435,6 +435,26 @@
       "group": "controls",
       "value": true,
       "source": "person's follow-up (could not Cmd+Tab to the Gloss window); setting, default on"
+    },
+    {
+      "name": "letter box gap",
+      "group": "quiz",
+      "value": 5,
+      "unit": "pt",
+      "source": "person's follow-up (solved boxes too crowded)"
+    },
+    {
+      "name": "solved boxes",
+      "group": "motion",
+      "value": "hop 3 pt box by box with a mint glow; no scale-up",
+      "source": "person's follow-up (solved boxes too crowded)"
+    },
+    {
+      "name": "auto-next after a right answer",
+      "group": "quiz",
+      "value": 0.7,
+      "unit": "s",
+      "source": "person's follow-up (sometimes did not move on); cancelled when the card changes another way"
     }
   ]
 }

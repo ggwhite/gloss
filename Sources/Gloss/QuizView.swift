@@ -198,7 +198,7 @@ struct QuizView: View {
                     .textFieldStyle(.plain)
                     .font(.system(size: 18, weight: .medium, design: .monospaced))
                     .autocorrectionDisabled()
-                    .background(FocusAnchor(trigger: focusTick))
+                    .background(FocusAnchor(trigger: focusTick, text: model.answer))
                     .onSubmit {
                         model.submit()
                         focusField()
@@ -342,6 +342,8 @@ struct LetterBoxes: View {
 
     /// Largest box width; boxes shrink to fit long words. See MECHANICS.md ("Motion").
     static let maxBox: CGFloat = 30
+    /// Space between boxes.
+    static let gap: CGFloat = 5
 
     var body: some View {
         let r = CardPrompt.slots(for: word, typed: typed)
@@ -350,10 +352,10 @@ struct LetterBoxes: View {
         GeometryReader { g in
             // Room left after the letter-count badge (~34) and, when shown, the "+N" badge (~34).
             let reserved: CGFloat = 40 + (r.overflow > 0 ? 38 : 0)
-            let gaps = CGFloat(max(r.slots.count - 1, 0)) * 4
+            let gaps = CGFloat(max(r.slots.count - 1, 0)) * Self.gap
             let room = g.size.width - reserved - gaps
             let box = min(Self.maxBox, max(12, room / (CGFloat(letterCount) + CGFloat(separators) * 0.35)))
-            HStack(spacing: 4) {
+            HStack(spacing: Self.gap) {
                 ForEach(Array(r.slots.enumerated()), id: \.offset) { i, slot in
                     cell(slot, index: i, size: box)
                 }
@@ -404,7 +406,9 @@ struct LetterBoxes: View {
                 }
             }
             .frame(width: size, height: size * 1.3)
-            .scaleEffect(solved ? 1.08 : 1)
+            // A solved word hops box by box and glows; the boxes keep their size so long words don't crowd.
+            .offset(y: solved ? -3 : 0)
+            .shadow(color: Theme.good.opacity(solved ? 0.55 : 0), radius: solved ? 6 : 0)
             .animation(Motion.spring.delay(solved ? Double(index) * 0.035 : 0), value: solved)
         }
     }

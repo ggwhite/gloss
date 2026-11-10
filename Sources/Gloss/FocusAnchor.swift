@@ -7,10 +7,14 @@ import SwiftUI
 /// that is already being typed in, so letters are never lost or selected.
 struct FocusAnchor: NSViewRepresentable {
     var trigger: Int
+    /// What the field should hold when it is focused for a new card (the model's answer, usually "").
+    /// The field's own text is set to it, so no letters from the last card stay behind.
+    var text: String = ""
 
     func makeNSView(context: Context) -> AnchorView { AnchorView() }
 
     func updateNSView(_ v: AnchorView, context: Context) {
+        v.expected = text
         if v.lastTrigger != trigger {
             v.lastTrigger = trigger
             v.focusSoon()
@@ -19,6 +23,9 @@ struct FocusAnchor: NSViewRepresentable {
 
     final class AnchorView: NSView {
         var lastTrigger = Int.min
+        var expected = ""
+        /// Set by a new trigger: the next focus also puts `expected` into the field.
+        private var resyncText = false
         private var keyObserver: NSObjectProtocol?
 
         override func viewDidMoveToWindow() {
@@ -37,6 +44,7 @@ struct FocusAnchor: NSViewRepresentable {
 
         /// Tries now and twice more, because a new field may not be in the window yet.
         func focusSoon() {
+            resyncText = true
             for delay in [0.0, 0.12, 0.35] {
                 DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in self?.focusNow() }
             }
@@ -47,6 +55,14 @@ struct FocusAnchor: NSViewRepresentable {
             // (say the main window behind the menu popover) would otherwise pull the cursor away.
             guard let window, window.isKeyWindow, let root = window.contentView, !isHiddenOrHasHiddenAncestor else { return }
             guard let field = nearestField(in: root) else { return }
+            if resyncText {
+                resyncText = false
+                if field.stringValue != expected { field.stringValue = expected }
+                if let editor = field.currentEditor(), editor.string != expected {
+                    editor.string = expected
+                    editor.selectedRange = NSRange(location: (expected as NSString).length, length: 0)
+                }
+            }
             if let editor = window.firstResponder as? NSTextView, editor.isFieldEditor,
                editor.delegate as? NSTextField === field {
                 return // already typing in it

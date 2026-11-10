@@ -375,6 +375,8 @@ enum Harness {
                 // focus: after a right answer the next card can be typed without clicking.
                 focusCheck { step in
                     steps.append(step)
+                    typingCheck { typed in
+                    steps.append(typed)
                     let enc = JSONEncoder()
                     enc.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
                     let url = URL(fileURLWithPath: path)
@@ -382,6 +384,7 @@ enum Harness {
                     try? enc.encode(Report(steps: steps)).write(to: url)
                     for s in steps { print("\(s.passed ? "PASS" : "FAIL") \(s.step): \(s.detail)") }
                     exit(steps.allSatisfy(\.passed) ? 0 : 1)
+                    }
                 }
             }
         }
@@ -431,6 +434,48 @@ enum Harness {
                 }
             }
         }
+    }
+
+    /// Types each answer through the text field (as the keyboard does), presses Enter, and checks that every
+    /// right answer moves on to the next card by itself.
+    static func typingCheck(rounds: Int = 5, done: @escaping (Step) -> Void) {
+        let clock = Clock(demoMorning())
+        let m = demoModel(clock)
+        let host = NSHostingView(rootView: QuizView(width: 480, showsFooter: false).environmentObject(m).environmentObject(Router())
+            .environment(\.colorScheme, .dark))
+        host.frame.size = CGSize(width: 480, height: 560)
+        let w = KeyablePanel(contentRect: NSRect(origin: offscreen, size: host.frame.size),
+                             styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+        w.contentView = host
+        w.orderFrontRegardless()
+        w.makeKey()
+        var log: [String] = []
+        var ok = true
+
+        func round(_ i: Int) {
+            guard i < rounds, let card = m.current else {
+                done(Step(step: "auto-next", passed: ok && log.count == rounds,
+                          detail: "typed and pressed Enter for \(log.count) right answers: " + log.joined(separator: ", ")))
+                return
+            }
+            guard let editor = w.firstResponder as? NSTextView, editor.isFieldEditor else {
+                ok = false
+                log.append("\(card.word): no cursor in the field")
+                done(Step(step: "auto-next", passed: false, detail: log.joined(separator: ", ")))
+                return
+            }
+            editor.insertText(card.word, replacementRange: editor.selectedRange())
+            editor.doCommand(by: #selector(NSResponder.insertNewline(_:)))
+            afterFrames(Int(AppModel.correctPause * 60) + 24) {
+                let moved = m.current != card && (m.phase == .asking || m.phase == .done)
+                if !moved { ok = false }
+                log.append("\(card.word) → \(moved ? (m.current?.word ?? "done") : "STUCK (\(m.phase))")")
+                if moved { round(i + 1) } else {
+                    done(Step(step: "auto-next", passed: false, detail: log.joined(separator: ", ")))
+                }
+            }
+        }
+        afterFrames(30) { round(0) }
     }
 
     // MARK: Run loop helpers

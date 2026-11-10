@@ -162,11 +162,14 @@ final class AppModel: ObservableObject {
         if outcome.correct {
             phase = .correct(outcome.entry)
             answer = "" // the field is free for the next card at once
-            let entry = outcome.entry
-            DispatchQueue.main.asyncAfter(deadline: .now() + Self.correctPause) { [weak self] in
-                guard let self, self.phase == .correct(entry) else { return }
+            // Move on after the green check, unless something else already moved on (Enter, typing, Skip).
+            let serial = cardSerial
+            let work = DispatchWorkItem { [weak self] in
+                guard let self, case .correct = self.phase, self.cardSerial == serial else { return }
                 self.next()
             }
+            advanceWork = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + Self.correctPause, execute: work)
         } else {
             phase = .wrong(outcome)
         }
@@ -183,7 +186,12 @@ final class AppModel: ObservableObject {
         syncFromSession()
     }
 
+    /// The pending "next card after the green check"; cancelled whenever the card changes another way.
+    private var advanceWork: DispatchWorkItem?
+
     private func syncFromSession() {
+        advanceWork?.cancel()
+        advanceWork = nil
         let previous = current
         current = session?.current
         cardSerial += 1

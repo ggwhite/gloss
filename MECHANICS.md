@@ -28,7 +28,7 @@ Every number that shapes how Gloss behaves. "request" means the person's build r
 | Card text | `中文 → first letter + "_" per letter (letter count)` | request |
 | Answer check | trim, collapse spaces, case-insensitive | request |
 | Wrong card requeue | 3 cards later (or at the end) | estimated |
-| Green check pause | 0.7 s | estimated |
+| Green check pause | 0.7 s, then the next card by itself (tracked by card, cancelled if Enter, typing or Skip moved on first); the field is cleared for the new card | person's follow-up (it did not always move on) |
 | Enter on a wrong answer | next card | estimated |
 | Answer field | keeps the cursor for every card (no clicking); only the question slides | person's follow-up |
 | Typing during the green check | goes to the next card at once and keeps the letters | estimated |
@@ -110,7 +110,7 @@ All of it turns off when macOS "Reduce motion" is on.
 | Overview tiles | fade and slide in one after another, 0.06 s apart; numbers roll up from 0; bars grow from 0 | estimated |
 | Hover | tiles lift 1.5 % with a violet glow; buttons grow 3–8 % and brighten | estimated |
 | Wrong answer | the card shakes 3 times (9 pt, 0.45 s); wrong letters pop | estimated |
-| Right answer | 16 sparks burst out (0.85 s); boxes turn mint one by one; check mark bounces | estimated |
+| Right answer | 16 sparks burst out (0.85 s); boxes turn mint and hop 3 pt one by one with a glow (no scale-up, so long words keep their spacing); check mark bounces | person's follow-up (boxes too crowded) |
 | Next card | slides in from the right | estimated |
 | Sidebar | the selected highlight slides to the new page; pages fade in | estimated |
 | Speaker buttons | ripple while the word is spoken | estimated |
