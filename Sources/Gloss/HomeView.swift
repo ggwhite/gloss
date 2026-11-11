@@ -15,7 +15,7 @@ struct PopoverRoot: View {
                     .transition(.move(edge: .leading).combined(with: .opacity))
             }
         }
-        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: model.showingQuiz)
+        .animation(.spring(response: 0.35, dampingFraction: 0.85).scaled, value: model.showingQuiz)
         // The popover takes the content's own height (it resizes the window to match), never less.
         .fixedSize(horizontal: false, vertical: true)
     }
@@ -43,7 +43,7 @@ struct Tile<Content: View>: View {
                 Image(systemName: icon)
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(LinearGradient(colors: iconColors, startPoint: .topLeading, endPoint: .bottomTrailing))
-                    .symbolEffect(.bounce, value: bounced)
+                    .symbolEffect(.bounce, options: .speed(1 / Motion.timeScale), value: bounced)
                     .frame(width: 24)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(title).font(.system(size: 14, weight: .semibold)).lineLimit(2).fixedSize(horizontal: false, vertical: true)
@@ -74,7 +74,7 @@ struct Tile<Content: View>: View {
         .frame(maxWidth: .infinity, minHeight: Self.minHeight, maxHeight: .infinity, alignment: .topLeading)
         .glassCard(radius: 18, strength: 0.03)
         .hoverLift(radius: 18)
-        .onAppear { DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { bounced = true } }
+        .onAppear { DispatchQueue.main.asyncAfter(deadline: .now() + Motion.seconds(0.5)) { bounced = true } }
     }
 }
 
@@ -133,10 +133,10 @@ struct HomeView: View {
         .frame(width: width)
         .frame(maxWidth: width == nil ? 760 : nil)
         .fontDesign(.rounded)
-        .animation(Motion.spring, value: model.settings.welcomeDone)
+        .animation(Motion.spring.scaled, value: model.settings.welcomeDone)
         .onAppear {
             model.reloadVault()
-            if reduce { grown = true } else { withAnimation(Motion.spring.delay(0.35)) { grown = true } }
+            if reduce { grown = true } else { withAnimation(Motion.spring.delay(0.35).scaled) { grown = true } }
         }
     }
 
@@ -268,7 +268,7 @@ struct HomeView: View {
                             .fill(LinearGradient(colors: i == 0 ? [Color.white.opacity(0.35), Color.white.opacity(0.18)] : [Theme.violet, Theme.accent],
                                                  startPoint: .top, endPoint: .bottom))
                             .frame(width: 18, height: max(4, 30 * CGFloat(counts[i]) / CGFloat(maxCount) * (grown ? 1 : 0.05)))
-                            .animation(Motion.spring.delay(Double(i) * 0.05), value: grown)
+                            .animation(Motion.spring.delay(Double(i) * 0.05).scaled, value: grown)
                         Text(labels[i]).font(.system(size: 8)).foregroundStyle(.secondary)
                     }
                 }

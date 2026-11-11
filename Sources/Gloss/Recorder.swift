@@ -4,14 +4,20 @@ import SwiftUI
 
 /// `--record <folder> --scene <name>`: plays a scripted scene off-screen with the made-up demo deck and
 /// writes frame-0000.tiff… plus times.txt (milliseconds since the start of each frame), for the README's
-/// animated pictures (scripts/record-demos.sh). Capturing is slower than 30 fps, so the real times are kept
-/// and the animation plays back at its true speed.
+/// animated pictures (scripts/record-demos.sh). One snapshot takes 20–190 ms (mostly drawing blurred
+/// shadows on the CPU), so the whole scene runs `timeScale` times slower (`Motion.timeScale`: animations,
+/// pauses, the drifting wash and the script) and times.txt holds scene time: the result plays at true
+/// speed with `fps` frames a second.
 @MainActor
 enum Recorder {
     static let fps = 30
+    static let timeScale: Double = 4
 
     struct Scene {
         var size: CGSize
+        /// Snapshot pixels per point, whatever the display: the README shows the 1000 pt window at 820 px,
+        /// and fewer pixels make each snapshot quicker.
+        var scale: CGFloat = 1
         var duration: Double
         var view: AnyView
         /// (seconds from start, action)
@@ -23,6 +29,7 @@ enum Recorder {
         let app = NSApplication.shared
         app.setActivationPolicy(.accessory)
         app.appearance = Theme.darkAppearance
+        Motion.timeScale = timeScale
         launcher = Launcher {
             guard let scene = makeScene(name) else { print("unknown scene \(name)"); exit(2) }
             let url = URL(fileURLWithPath: folder)
@@ -42,15 +49,24 @@ enum Recorder {
             let start = Date()
             var frame = 0
             var times: [String] = []
-            Timer.scheduledTimer(withTimeInterval: 1.0 / Double(fps), repeats: true) { t in
+            var nextFrame = 0.0
+            // Checks often and snaps as soon as a frame is due: a slow snapshot then delays only the next one,
+            // where a timer at the frame rate would skip a whole tick.
+            Timer.scheduledTimer(withTimeInterval: 0.005, repeats: true) { t in
                 MainActor.assumeIsolated {
-                    let elapsed = Date().timeIntervalSince(start)
+                    let elapsed = Date().timeIntervalSince(start) / timeScale   // scene time
                     while let first = pending.first, first.0 <= elapsed {
                         pending.removeFirst()
                         first.1()
                     }
+                    guard elapsed >= nextFrame || elapsed >= scene.duration else { return }
+                    nextFrame = max(nextFrame + 1 / Double(fps), elapsed - 1 / Double(fps))   // catch up one late frame, no more
                     host.layoutSubtreeIfNeeded()
-                    if let rep = host.bitmapImageRepForCachingDisplay(in: host.bounds) {
+                    if let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(scene.size.width * scene.scale),
+                                                  pixelsHigh: Int(scene.size.height * scene.scale), bitsPerSample: 8,
+                                                  samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB,
+                                                  bytesPerRow: 0, bitsPerPixel: 0)?.retagging(with: .sRGB) {
+                        rep.size = scene.size
                         host.cacheDisplay(in: host.bounds, to: rep)
                         let file = url.appendingPathComponent(String(format: "frame-%04d.tiff", frame))
                         try? rep.tiffRepresentation?.write(to: file)
@@ -60,7 +76,7 @@ enum Recorder {
                     if elapsed >= scene.duration {
                         t.invalidate()
                         try? (times.joined(separator: "\n") + "\n").write(to: url.appendingPathComponent("times.txt"), atomically: true, encoding: .utf8)
-                        print("Wrote \(frame) frames over \(String(format: "%.1f", elapsed)) s to \(folder)")
+                        print("Wrote \(frame) frames over \(String(format: "%.1f", elapsed)) s of scene time to \(folder)")
                         exit(0)
                     }
                 }
@@ -134,8 +150,8 @@ enum Recorder {
                          view: AnyView(FixView(model: fix).padding(24).frame(width: 460 + 48, height: 600, alignment: .top)
                             .background(AuroraBackdrop())),
                          script: [
-                            (0.7, { withAnimation(Motion.spring) { fix.phase = .asking(text) } }),
-                            (2.2, { withAnimation(Motion.spring) { fix.phase = .done(text, Harness.sampleFix) } }),
+                            (0.7, { withAnimation(Motion.spring.scaled) { fix.phase = .asking(text) } }),
+                            (2.2, { withAnimation(Motion.spring.scaled) { fix.phase = .done(text, Harness.sampleFix) } }),
                             (3.9, { fix.copied = "Fixed" }),
                          ])
         case "window", "practice":
@@ -145,7 +161,7 @@ enum Recorder {
             var script: [(Double, () -> Void)] = []
             if name == "window" {
                 for (t, p) in [(1.6, Page.quiz), (3.4, Page.stats), (5.6, Page.fix), (7.0, Page.settings), (8.6, Page.overview)] {
-                    script.append((t, { withAnimation(Motion.spring) { nav.page = p } }))
+                    script.append((t, { withAnimation(Motion.spring.scaled) { nav.page = p } }))
                 }
             } else {
                 // Finish the day's cards, then pick "Hardest 10" and answer one.
@@ -165,7 +181,7 @@ enum Recorder {
                 .background(Theme.wash) // still background: a drifting one makes every frame differ (big file)
                 .background(Theme.navy)
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            return Scene(size: CGSize(width: 1000, height: 700), duration: name == "window" ? 10.4 : 5.6,
+            return Scene(size: CGSize(width: 1000, height: 700), scale: 0.82, duration: name == "window" ? 10.4 : 5.6,
                          view: AnyView(view), script: script)
         default:
             return nil

@@ -44,15 +44,15 @@ struct QuizView: View {
         .padding(14)
         .frame(width: width)
         .fontDesign(.rounded)
-        .animation(Motion.spring, value: model.phase)
-        .animation(Motion.spring, value: model.cardSerial)
+        .animation(Motion.spring.scaled, value: model.phase)
+        .animation(Motion.spring.scaled, value: model.cardSerial)
         .onAppear {
             model.openQuiz()
             focusField()
         }
         .onChange(of: model.cardSerial) { _, _ in focusField() }
         .onChange(of: model.drillMisses) { _, _ in
-            if !reduce { withAnimation(.linear(duration: 0.45)) { shakes += 1 } }
+            if !reduce { withAnimation(.linear(duration: 0.45).scaled) { shakes += 1 } }
             focusField()
         }
         .onChange(of: model.drill?.done) { _, _ in focusField() }
@@ -60,7 +60,7 @@ struct QuizView: View {
             if phase == .asking { focusField() }
             switch phase {
             case .wrong:
-                if !reduce { withAnimation(.linear(duration: 0.45)) { shakes += 1 } }
+                if !reduce { withAnimation(.linear(duration: 0.45).scaled) { shakes += 1 } }
             case .correct:
                 bursts += 1
             default:
@@ -121,8 +121,8 @@ struct QuizView: View {
                     .glass(Capsule(), tint: model.dueCount > 0 ? Theme.bad : nil, strength: model.dueCount > 0 ? 0.8 : 0.1)
             }
         }
-        .animation(Motion.spring, value: model.dueCount)
-        .animation(Motion.spring, value: model.sessionAnswered)
+        .animation(Motion.spring.scaled, value: model.dueCount)
+        .animation(Motion.spring.scaled, value: model.sessionAnswered)
         .glassGroup(spacing: 8)
     }
 
@@ -185,7 +185,7 @@ struct QuizView: View {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 28))
                         .foregroundStyle(Theme.good)
-                        .symbolEffect(.bounce, value: bursts)
+                        .symbolEffect(.bounce, options: .speed(1 / Motion.timeScale), value: bursts)
                     Text(e.word).font(.system(size: 20, weight: .semibold, design: .monospaced))
                     Spacer()
                     Text("Correct").font(.headline).foregroundStyle(Theme.good)
@@ -347,7 +347,7 @@ struct ProgressBar: View {
             }
         }
         .frame(height: 5)
-        .animation(Motion.spring, value: value)
+        .animation(Motion.spring.scaled, value: value)
         .accessibilityLabel("Round progress \(Int(value * 100)) percent")
     }
 }
@@ -397,7 +397,7 @@ struct LetterBoxes: View {
             .frame(maxHeight: .infinity)
         }
         .frame(height: Self.maxBox * 1.3)
-        .animation(Motion.snappy, value: typed)
+        .animation(Motion.snappy.scaled, value: typed)
         .accessibilityHidden(true)
     }
 
@@ -429,7 +429,7 @@ struct LetterBoxes: View {
             // A solved word hops box by box and glows; the boxes keep their size so long words don't crowd.
             .offset(y: solved ? -3 : 0)
             .shadow(color: Theme.good.opacity(solved ? 0.55 : 0), radius: solved ? 6 : 0)
-            .animation(Motion.spring.delay(solved ? Double(index) * 0.035 : 0), value: solved)
+            .animation(Motion.spring.delay(solved ? Double(index) * 0.035 : 0).scaled, value: solved)
         }
     }
 
@@ -498,7 +498,7 @@ struct WrongAnswerView: View {
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .onAppear { withAnimation(Motion.spring.delay(0.15)) { popped = true } }
+        .onAppear { withAnimation(Motion.spring.delay(0.15).scaled) { popped = true } }
     }
 }
 
@@ -517,7 +517,7 @@ struct RightSpelling: View {
                     .padding(.horizontal, 2)
                     .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(bad ? Theme.bad.opacity(0.85) : Color.clear))
                     .scaleEffect(bad && popped ? 1.15 : 1)
-                    .animation(Motion.spring.delay(Double(i) * 0.02), value: popped)
+                    .animation(Motion.spring.delay(Double(i) * 0.02).scaled, value: popped)
             }
         }
         .accessibilityLabel(word)
@@ -626,7 +626,7 @@ struct DrillProgress: View {
                         .frame(width: 12, height: 12)
                         .scaleEffect(filled ? 1.0 : 0.85)
                         .shadow(color: Theme.good.opacity(filled ? 0.7 : 0), radius: filled ? 5 : 0)
-                        .animation(Motion.spring, value: filled)
+                        .animation(Motion.spring.scaled, value: filled)
                 }
             }
             .accessibilityLabel("\(drill.done) of \(drill.required) copies")
@@ -634,6 +634,6 @@ struct DrillProgress: View {
         .padding(.horizontal, 14).padding(.vertical, 10)
         .glass(RoundedRectangle(cornerRadius: 18, style: .continuous),
                tint: drill.isFinished ? Theme.good : Theme.link, strength: 0.12)
-        .animation(Motion.spring, value: drill.done)
+        .animation(Motion.spring.scaled, value: drill.done)
     }
 }

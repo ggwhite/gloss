@@ -184,7 +184,7 @@ final class AppModel: ObservableObject {
                 self.next()
             }
             advanceWork = work
-            DispatchQueue.main.asyncAfter(deadline: .now() + Self.drillDonePause, execute: work)
+            DispatchQueue.main.asyncAfter(deadline: .now() + Motion.seconds(Self.drillDonePause), execute: work)
         }
     }
 
@@ -208,7 +208,7 @@ final class AppModel: ObservableObject {
                 self.next()
             }
             advanceWork = work
-            DispatchQueue.main.asyncAfter(deadline: .now() + Self.correctPause, execute: work)
+            DispatchQueue.main.asyncAfter(deadline: .now() + Motion.seconds(Self.correctPause), execute: work)
         } else {
             phase = .wrong(outcome)
             if settings.copyReps > 0 {

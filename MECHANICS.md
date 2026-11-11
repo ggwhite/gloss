@@ -107,6 +107,7 @@ Every number that shapes how Gloss behaves. "request" means the person's build r
 | ⌘Tab and Dock | while the Gloss window is open Gloss is a regular app (Dock icon, ⌘Tab, ⌘W closes); closed, it is menu bar only (setting, on by default) | person's follow-up |
 | Main window size | 1000 × 760 pt (min 900 × 640), position remembered | estimated |
 | Screenshot and self-test windows | drawn off-screen, so checks never flash a window | person's follow-up |
+| README recordings (`make demos`) | each scene runs 4× slower off-screen (animations, pauses, wash, script), one snapshot every 1/30 s of scene time, played back at true speed: 30 frames a second, no gap over ~50 ms; the main window is snapshotted at 820 px | person's follow-up (choppy), measured |
 | Today's Recommendation | due cards first (names the meaning, never the word), then the worst 7-day category, then Fix my English | estimated |
 
 ## Motion

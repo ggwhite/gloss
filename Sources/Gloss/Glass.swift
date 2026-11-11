@@ -138,8 +138,8 @@ struct GlassPillStyle: ButtonStyle {
                 .contentShape(Capsule())
                 .brightness(hovering ? 0.06 : 0)
                 .scaleEffect(configuration.isPressed ? 0.94 : (hovering ? 1.03 : 1))
-                .animation(Motion.snappy, value: configuration.isPressed)
-                .animation(Motion.snappy, value: hovering)
+                .animation(Motion.snappy.scaled, value: configuration.isPressed)
+                .animation(Motion.snappy.scaled, value: hovering)
                 .onHover { hovering = $0 }
         }
     }
@@ -166,8 +166,8 @@ struct GlassCircleStyle: ButtonStyle {
                 .glass(Circle(), tint: hovering ? Theme.accent : nil, strength: hovering ? 0.35 : 0.1, interactive: true)
                 .contentShape(Circle())
                 .scaleEffect(configuration.isPressed ? 0.9 : (hovering ? 1.08 : 1))
-                .animation(Motion.snappy, value: configuration.isPressed)
-                .animation(Motion.snappy, value: hovering)
+                .animation(Motion.snappy.scaled, value: configuration.isPressed)
+                .animation(Motion.snappy.scaled, value: hovering)
                 .onHover { hovering = $0 }
         }
     }

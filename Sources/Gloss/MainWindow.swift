@@ -51,7 +51,7 @@ struct MainWindowView: View {
                 .transition(.asymmetric(insertion: .opacity.combined(with: .offset(y: 10)), removal: .opacity))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .animation(Motion.spring, value: nav.page)
+        .animation(Motion.spring.scaled, value: nav.page)
         .frame(minWidth: 900, minHeight: 640)
         .fontDesign(.rounded)
         .background {
@@ -119,7 +119,7 @@ struct MainWindowView: View {
         .padding(.vertical, 9)
         .contentShape(Capsule())
 
-        Button { withAnimation(Motion.spring) { nav.page = page } } label: {
+        Button { withAnimation(Motion.spring.scaled) { nav.page = page } } label: {
             row
                 .background {
                     if selected {
@@ -136,7 +136,7 @@ struct MainWindowView: View {
                 .offset(x: hovered == page && !selected ? 3 : 0)
         }
         .buttonStyle(.plain)
-        .onHover { h in withAnimation(Motion.snappy) { hovered = h ? page : (hovered == page ? nil : hovered) } }
+        .onHover { h in withAnimation(Motion.snappy.scaled) { hovered = h ? page : (hovered == page ? nil : hovered) } }
         .keyboardShortcut(KeyEquivalent(Character(String(Page.allCases.firstIndex(of: page)! + 1))), modifiers: .command)
     }
 

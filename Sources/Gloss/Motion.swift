@@ -8,6 +8,22 @@ enum Motion {
     static let snappy = Animation.spring(response: 0.28, dampingFraction: 0.72)
     /// Delay between tiles that fade in one after another.
     static let stagger: Double = 0.06
+
+    /// How many times slower everything that moves runs: 1 in the app. `--record` raises it, so the slow
+    /// off-screen snapshots still catch many frames, then plays the frames back sped up (see Recorder).
+    /// Every animation (`.scaled`), timed pause (`seconds(_:)`) and TimelineView clock (`clock(_:)`) reads it.
+    static var timeScale: Double = 1
+
+    /// `t` seconds of the app's timing, stretched by `timeScale`.
+    static func seconds(_ t: Double) -> Double { t * timeScale }
+
+    /// A TimelineView date as seconds on the stretched clock, so drifting decoration slows down too.
+    static func clock(_ date: Date) -> Double { date.timeIntervalSinceReferenceDate / timeScale }
+}
+
+extension Animation {
+    /// This animation (delay included) slowed by `Motion.timeScale`; unchanged in the app.
+    var scaled: Animation { Motion.timeScale == 1 ? self : speed(1 / Motion.timeScale) }
 }
 
 /// Fades and slides a view in when it appears, after `delay` seconds.
@@ -24,7 +40,7 @@ struct AppearIn: ViewModifier {
             .scaleEffect(shown || reduce ? 1 : 0.97, anchor: .top)
             .onAppear {
                 guard !reduce else { return }
-                withAnimation(Motion.spring.delay(delay)) { shown = true }
+                withAnimation(Motion.spring.delay(delay).scaled) { shown = true }
             }
     }
 }
@@ -54,7 +70,7 @@ struct HoverLift: ViewModifier {
                     .stroke(Color.white.opacity(hovering ? 0.22 : 0), lineWidth: 1)
             )
             .shadow(color: Theme.accent.opacity(hovering ? 0.35 : 0), radius: hovering ? 16 : 0, y: hovering ? 6 : 0)
-            .onHover { h in withAnimation(Motion.snappy) { hovering = h } }
+            .onHover { h in withAnimation(Motion.snappy.scaled) { hovering = h } }
     }
 }
 
@@ -87,7 +103,7 @@ struct SparkBurst: View {
         .allowsHitTesting(false)
         .onAppear {
             guard !reduce else { fly = true; return }
-            withAnimation(.easeOut(duration: 0.85)) { fly = true }
+            withAnimation(.easeOut(duration: 0.85).scaled) { fly = true }
         }
     }
 }
@@ -107,10 +123,10 @@ struct RollingNumber: View {
             .monospacedDigit()
             .foregroundStyle(color)
             .contentTransition(.numericText(value: Double(shown ? value : 0)))
-            .animation(Motion.spring, value: value)
+            .animation(Motion.spring.scaled, value: value)
             .onAppear {
                 guard !reduce else { return }
-                withAnimation(.easeOut(duration: 0.8).delay(delay)) { shown = true }
+                withAnimation(.easeOut(duration: 0.8).delay(delay).scaled) { shown = true }
             }
     }
 }
@@ -134,7 +150,7 @@ struct AnimatedWash: View {
         } else {
             // Screenshots and recordings draw frame by frame off-screen, which needs the SwiftUI version.
             TimelineView(.animation(minimumInterval: 1.0 / Self.fps, paused: !visible)) { context in
-                let t = context.date.timeIntervalSinceReferenceDate / 24 * 2 * .pi
+                let t = Motion.clock(context.date) / 24 * 2 * .pi
                 ZStack {
                     LinearGradient(colors: [Color(red: 0.07, green: 0.06, blue: 0.24).opacity(0.86),
                                             Color(red: 0.26, green: 0.10, blue: 0.55).opacity(0.80)],
@@ -165,7 +181,7 @@ struct FloatingBob: ViewModifier {
             content
         } else {
             TimelineView(.animation(minimumInterval: 1.0 / 20.0, paused: !visible)) { context in
-                let t = context.date.timeIntervalSinceReferenceDate
+                let t = Motion.clock(context.date)
                 content.offset(y: 3 * sin(t * 2 * .pi / 4.8))
             }
         }

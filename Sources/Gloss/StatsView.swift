@@ -71,7 +71,7 @@ struct StatsView: View {
         .frame(minWidth: 640, minHeight: 560)
         .onAppear {
             model.reloadVault()
-            if reduce { grown = true } else { withAnimation(.spring(response: 0.8, dampingFraction: 0.8).delay(0.3)) { grown = true } }
+            if reduce { grown = true } else { withAnimation(.spring(response: 0.8, dampingFraction: 0.8).delay(0.3).scaled) { grown = true } }
         }
     }
 
@@ -122,7 +122,7 @@ struct StatsView: View {
                         Capsule()
                             .fill(LinearGradient(colors: [Theme.violet, Theme.bad], startPoint: .leading, endPoint: .trailing))
                             .frame(width: max(6, CGFloat(e.count) / CGFloat(maxCount) * 60 * (grown ? 1 : 0.1)), height: 7)
-                            .animation(Motion.spring.delay(Double(i) * 0.04), value: grown)
+                            .animation(Motion.spring.delay(Double(i) * 0.04).scaled, value: grown)
                         Text("\(e.count)×").font(.caption.monospacedDigit().weight(.semibold)).frame(width: 28, alignment: .trailing)
                     }
                 }
