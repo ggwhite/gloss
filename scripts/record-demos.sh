@@ -8,8 +8,7 @@ BIN="$(swift build --show-bin-path)/Gloss"
 TMP="$(mktemp -d)"
 mkdir -p assets
 
-record() { # scene width [quality]
-    local q="${3:-70}"
+record() { # scene width
     "$BIN" --record "$TMP/$1" --scene "$1" >/dev/null
     mkdir -p "$TMP/$1-small"
     ffmpeg -loglevel error -y -i "$TMP/$1/frame-%04d.tiff" -vf "scale=$2:-2:flags=lanczos" -start_number 0 "$TMP/$1-small/f-%04d.png"
@@ -20,13 +19,16 @@ record() { # scene width [quality]
         prev="$t"
     done < "$TMP/$1/times.txt"
     args+=(-d 1500 "$(printf "$TMP/$1-small/f-%04d.png" "$i")")   # hold the last frame
-    img2webp -loop 0 -lossy -q "$q" -m 6 "${args[@]}" -o "assets/$1.webp" >/dev/null
+    # Between key frames img2webp only re-sends blocks that changed by more than a quality-based margin,
+    # so small lossy errors pile up into stale blocks that look like noise and stay on still frames.
+    # A key frame every 3 frames and q 80 keep them away; sharp_yuv keeps coloured text edges cleaner.
+    img2webp -loop 0 -kmin 2 -kmax 3 -sharp_yuv -lossy -q 80 -m 6 "${args[@]}" -o "assets/$1.webp" >/dev/null
     echo "assets/$1.webp $(du -h "assets/$1.webp" | cut -f1)"
 }
 
-record window 820 62
+record window 820
 record quiz 468
 record overview 468
-record practice 820 62
+record practice 820
 record fix 508
 cp Resources/AppIcon-1024.png assets/icon.png
