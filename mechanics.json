@@ -493,6 +493,43 @@
       "group": "overview",
       "value": "3×2 grid, both tiles of a row the same height, actions on the bottom edge, min height 112 pt",
       "source": "person's follow-up (blocks were different sizes)"
+    },
+    {
+      "name": "Claude start-up per question (before)",
+      "group": "fix",
+      "value": 5.3,
+      "unit": "s",
+      "source": "measured: claude -p 'ok' with Haiku"
+    },
+    {
+      "name": "waiting Claude",
+      "group": "fix",
+      "value": "one started ahead, fresh per question, replaced after 60 min",
+      "source": "person's follow-up (speed it up); measured look-up 1.2 s, fix 2.5–7 s (was 10.8 s)"
+    },
+    {
+      "name": "Claude model",
+      "group": "fix",
+      "value": "haiku",
+      "source": "person's follow-up (speed); setting: haiku or sonnet"
+    },
+    {
+      "name": "Claude runs without hooks, MCP servers or tools",
+      "group": "fix",
+      "value": true,
+      "estimated": true
+    },
+    {
+      "name": "new words deck",
+      "group": "decks",
+      "value": "## 問過的字 (| 字 | 中文 | 例句 |) + words added in Gloss; on by default",
+      "source": "person's follow-up (add words I don't know)"
+    },
+    {
+      "name": "new word saved to",
+      "group": "decks",
+      "value": "單字.md ## 問過的字 when writing to notes is on, else Gloss's words.json",
+      "estimated": true
     }
   ]
 }

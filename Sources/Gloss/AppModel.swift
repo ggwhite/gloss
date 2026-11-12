@@ -48,8 +48,12 @@ final class AppModel: ObservableObject {
     /// How long the green check stays before the next card (seconds). See MECHANICS.md.
     static let correctPause: Double = 0.7
 
+    /// Words added by hand while Gloss may not write to the vault (nil: none kept).
+    let wordStore: NewWordStore?
+
     init(settings: AppSettings, store: StateStore?, fixedSnapshot: VaultSnapshot? = nil, initialState: GlossState? = nil,
-         calendar: Calendar = .current, now: @escaping () -> Date = Date.init) {
+         wordStore: NewWordStore? = nil, calendar: Calendar = .current, now: @escaping () -> Date = Date.init) {
+        self.wordStore = wordStore
         self.settings = settings
         self.store = store
         self.fixedSnapshot = fixedSnapshot
@@ -81,6 +85,7 @@ final class AppModel: ObservableObject {
             fingerprint = fp
             snapshot = Vault.load(path: settings.vaultPath, now: now())
         }
+        mergeAddedWords()
         refreshDue()
         if session == nil || phase == .done { startSession() }
     }
@@ -148,6 +153,78 @@ final class AppModel: ObservableObject {
         case .correct: next()
         case .done: startSession()
         }
+    }
+
+    // MARK: New words
+
+    /// Adds the words kept in Gloss to the New words deck (a word already in the notes is kept once).
+    private func mergeAddedWords() {
+        guard let added = wordStore?.load(), !added.isEmpty else { return }
+        var deck = snapshot.decks[.asked] ?? []
+        let known = Set(deck.map { $0.word.lowercased() })
+        deck += added.map(\.entry).filter { !known.contains($0.word.lowercased()) }
+        snapshot.decks[.asked] = deck
+    }
+
+    enum AddWordOutcome: Equatable {
+        case savedToNotes
+        case savedInGloss(note: String?)
+        case alreadyInNotes
+        case failed(String)
+    }
+
+    /// Saves a new word: into the `## 問過的字` table of 單字.md when Gloss may write to the notes
+    /// (Settings → Write to my notes), otherwise in Gloss's own list. Either way it joins the New words deck.
+    func addWord(_ word: String, meaning: String, example: String) -> AddWordOutcome {
+        let w = Markdown.collapseWhitespace(word), m = Markdown.collapseWhitespace(meaning)
+        let ex = Markdown.collapseWhitespace(example)
+        guard !w.isEmpty, !m.isEmpty else { return .failed("Type the word and its meaning.") }
+        var note: String?
+        if settings.saveFixMistakes {
+            let url = Vault.resolve(settings.vaultPath).appendingPathComponent(Vault.vocabFile)
+            if let text = try? String(contentsOf: url, encoding: .utf8) {
+                switch AskedTable.add(word: w, meaning: m, example: ex, to: text) {
+                case .success(let updated):
+                    do {
+                        try updated.write(to: url, atomically: true, encoding: .utf8)
+                        reloadVault(force: true)
+                        return .savedToNotes
+                    } catch {
+                        note = "Couldn't write 單字.md (\(error.localizedDescription)); kept in Gloss instead."
+                    }
+                case .failure(.alreadyThere):
+                    return .alreadyInNotes
+                case .failure(.noSection):
+                    note = "單字.md has no “## 問過的字” table; kept in Gloss instead."
+                case .failure(.unexpectedColumns(let cols)):
+                    note = "The “## 問過的字” table has other columns (\(cols.joined(separator: " | "))); kept in Gloss instead."
+                }
+            } else {
+                note = "Couldn't read 單字.md; kept in Gloss instead."
+            }
+        }
+        guard let wordStore else { return .failed("No place to keep the word.") }
+        do {
+            try wordStore.add(NewWord(word: w, meaning: m, example: ex, added: now()))
+        } catch {
+            return .failed(error.localizedDescription)
+        }
+        reloadVault(force: true)
+        return .savedInGloss(note: note)
+    }
+
+    /// The New words cards, newest last.
+    var newWords: [VocabEntry] { snapshot.decks[.asked] ?? [] }
+
+    /// A practice round with just these words (it doesn't change the schedule).
+    func practise(_ words: [VocabEntry]) {
+        guard !words.isEmpty else { return }
+        practiceKind = .today
+        session = QuizSession(cards: words, state: state, scheduler: scheduler, practice: true, now: now)
+        sessionAnswered = 0
+        sessionCorrect = 0
+        answer = ""
+        syncFromSession()
     }
 
     // MARK: Copy drill

@@ -10,6 +10,7 @@ struct SettingsView: View {
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
     @State private var loginError: String?
     @State private var trusted = AXIsProcessTrusted()
+    @State private var claudeReady = ClaudeRunner.isReady
 
     var body: some View {
         Form {
@@ -35,6 +36,7 @@ struct SettingsView: View {
             Section("Decks") {
                 Toggle("Spelling (## 拼字) — \(model.snapshot.decks[.spelling]?.count ?? 0) cards", isOn: $settings.spellingDeck)
                 Toggle("Word choice (## 用字) — \(model.snapshot.decks[.usage]?.count ?? 0) cards", isOn: $settings.usageDeck)
+                Toggle("New words (## 問過的字 + added in Gloss) — \(model.snapshot.decks[.asked]?.count ?? 0) cards", isOn: $settings.askedDeck)
                 Stepper("New cards per day: \(settings.newPerDay)", value: $settings.newPerDay, in: 0...200, step: 5)
                 Stepper(settings.copyReps == 0 ? "Retype after a mistake: off"
                                                : "Retype after a mistake: \(settings.copyReps) times",
@@ -77,8 +79,8 @@ struct SettingsView: View {
                     Spacer()
                     HotKeyRecorder(combo: $settings.hotKey, defaultCombo: .default)
                 }
-                Toggle("Save Fix My English mistakes to vault", isOn: $settings.saveFixMistakes)
-                Text("Appends each mistake to \(Vault.mistakesFolder)/YYYY-MM-DD.md and updates the ## 拼字 / ## 用字 tables in \(Vault.vocabFile). Off: Gloss never writes to the vault.")
+                Toggle("Write to my notes (Fix My English mistakes and new words)", isOn: $settings.saveFixMistakes)
+                Text("Appends each mistake to \(Vault.mistakesFolder)/YYYY-MM-DD.md, updates the ## 拼字 / ## 用字 tables, and adds new words to ## 問過的字 in \(Vault.vocabFile). Off: Gloss never writes to the vault; new words are kept in Gloss.")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 HStack {
                     Image(systemName: trusted ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
@@ -89,6 +91,18 @@ struct SettingsView: View {
                         Button("Open System Settings") { Permissions.openAccessibilitySettings() }
                             .buttonStyle(GlassPillStyle(tint: Theme.accent, prominent: true, compact: true))
                     }
+                }
+            }
+            Section("Claude (Fix My English, word look-ups)") {
+                Picker("Model", selection: $settings.claudeModel) {
+                    Text("Haiku — fastest").tag("haiku")
+                    Text("Sonnet — more careful").tag("sonnet")
+                }
+                Toggle("Keep Claude ready (answers in about 2 s instead of 7–11 s)", isOn: $settings.keepClaudeReady)
+                HStack(spacing: 6) {
+                    Circle().fill(claudeReady ? Theme.good : Color.secondary.opacity(0.5)).frame(width: 8, height: 8)
+                    Text(claudeReady ? "Claude is ready" : (settings.keepClaudeReady ? "Starting Claude…" : "Claude starts when needed"))
+                        .font(.caption).foregroundStyle(.secondary)
                 }
             }
             Section("General") {
@@ -107,6 +121,7 @@ struct SettingsView: View {
         .frame(maxWidth: .infinity)
         .onReceive(Timer.publish(every: 2, on: .main, in: .common).autoconnect()) { _ in
             trusted = AXIsProcessTrusted()
+            claudeReady = ClaudeRunner.isReady
         }
     }
 

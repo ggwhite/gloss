@@ -3,13 +3,14 @@ import SwiftUI
 
 /// The pages of the one main window.
 enum Page: String, CaseIterable, Identifiable {
-    case overview, quiz, stats, fix, settings
+    case overview, quiz, addWord, stats, fix, settings
 
     var id: String { rawValue }
     var title: String {
         switch self {
         case .overview: return "Overview"
         case .quiz: return "Quiz"
+        case .addWord: return "Add Word"
         case .stats: return "Stats"
         case .fix: return "Fix My English"
         case .settings: return "Settings"
@@ -19,6 +20,7 @@ enum Page: String, CaseIterable, Identifiable {
         switch self {
         case .overview: return "square.grid.2x2.fill"
         case .quiz: return "character.book.closed.fill"
+        case .addWord: return "plus.square.fill"
         case .stats: return "chart.bar.fill"
         case .fix: return "wand.and.stars"
         case .settings: return "gearshape.fill"
@@ -185,7 +187,7 @@ struct MainWindowView: View {
                     HStack(spacing: 14) {
                         keyTip("↩", "check / next")
                         keyTip("⌘P", "hear the word")
-                        keyTip("⌘1–5", "switch pages")
+                        keyTip("⌘1–6", "switch pages")
                     }
                     .padding(.leading, 4)
                 }
@@ -195,6 +197,8 @@ struct MainWindowView: View {
             }
         case .stats:
             StatsView()
+        case .addWord:
+            AddWordView()
         case .fix:
             FixPage()
         case .settings:

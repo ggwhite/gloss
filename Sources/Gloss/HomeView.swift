@@ -364,6 +364,9 @@ struct HomeView: View {
             Button { router.showStats() } label: { Image(systemName: "chart.bar.fill") }
                 .buttonStyle(GlassCircleStyle())
                 .help("Stats")
+            Button { router.showAddWord() } label: { Image(systemName: "plus") }
+                .buttonStyle(GlassCircleStyle())
+                .help("Add a new word")
             Button { router.showOverview() } label: { Image(systemName: "macwindow") }
                 .buttonStyle(GlassCircleStyle())
                 .help("Open the Gloss window")

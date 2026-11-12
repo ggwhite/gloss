@@ -380,6 +380,9 @@ enum Harness {
                     steps.append(typed)
                     drillCheck { drilled in
                     steps.append(drilled)
+                    steps.append(addWordCheck())
+                    warmClaudeCheck { warm in
+                    steps.append(warm)
                     idleCpuCheck { cpu in
                     steps.append(cpu)
                     let enc = JSONEncoder()
@@ -389,6 +392,7 @@ enum Harness {
                     try? enc.encode(Report(steps: steps)).write(to: url)
                     for s in steps { print("\(s.passed ? "PASS" : "FAIL") \(s.step): \(s.detail)") }
                     exit(steps.allSatisfy(\.passed) ? 0 : 1)
+                    }
                     }
                     }
                     }
@@ -541,6 +545,129 @@ enum Harness {
                 print("\(step.passed ? "PASS" : "FAIL") \(step.step): \(step.detail)")
                 let hold = ProcessInfo.processInfo.environment["GLOSS_HOLD"] != nil ? 20.0 : 0
                 DispatchQueue.main.asyncAfter(deadline: .now() + hold) { exit(step.passed ? 0 : 1) }
+            }
+        }
+    }
+
+    /// Adding new words: into a temporary vault's ## 問過的字 table when writing to notes is on, else into
+    /// Gloss's own list; duplicates are refused; the words join the deck and can be practised at once.
+    static func addWordCheck() -> Step {
+        let fm = FileManager.default
+        let dir = fm.temporaryDirectory.appendingPathComponent("gloss-addword-\(UUID().uuidString)")
+        try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: dir) }
+        let note = DemoDeck.markdown + "\n\n## 問過的字\n\n| 字 | 中文 | 例句 |\n|---|---|---|\n| quorble | 抱怨 | Don't quorble. |\n"
+        let vocab = dir.appendingPathComponent(Vault.vocabFile)
+        try? note.write(to: vocab, atomically: true, encoding: .utf8)
+        let settings = demoSettings()
+        settings.vaultPath = dir.path
+        settings.saveFixMistakes = true
+        let m = AppModel(settings: settings, store: nil, wordStore: NewWordStore(url: dir.appendingPathComponent("words.json")),
+                         now: { demoMorning() })
+        var notes: [String] = []
+        let a = m.addWord("zelquin", meaning: "微調", example: "Please zelquin the config.")
+        let inFile = (try? String(contentsOf: vocab, encoding: .utf8))?.contains("| zelquin | 微調 | Please zelquin the config. |") ?? false
+        notes.append("to notes: \(a == .savedToNotes ? "saved" : "\(a)"), row in 單字.md \(inFile)")
+        let b = m.addWord("Zelquin", meaning: "x", example: "")
+        notes.append("again: \(b == .alreadyInNotes ? "refused as a duplicate" : "\(b)")")
+        settings.saveFixMistakes = false
+        let c = m.addWord("plimbo", meaning: "小狗", example: "")
+        let kept = NewWordStore(url: dir.appendingPathComponent("words.json")).load().map(\.word)
+        notes.append("notes off: \(c == .savedInGloss(note: nil) ? "kept in Gloss" : "\(c)") \(kept)")
+        let deck = m.newWords.map(\.word)
+        notes.append("New words deck: \(deck)")
+        m.practise(m.newWords)
+        let practising = m.isPracticing && m.current.map { deck.contains($0.word) } == true
+        notes.append("practise now: \(practising)")
+        let ok = a == .savedToNotes && inFile && b == .alreadyInNotes && c == .savedInGloss(note: nil)
+            && kept == ["plimbo"] && Set(deck) == ["quorble", "zelquin", "plimbo"] && practising
+        return Step(step: "add-word", passed: ok, detail: notes.joined(separator: "; "))
+    }
+
+    /// The waiting Claude, with a stand-in `claude` script (1 s to start, then answers at once): it is
+    /// started ahead, answers a look-up and a fix quickly, and the next one is started after each answer.
+    static func warmClaudeCheck(done: @escaping (Step) -> Void) {
+        let fm = FileManager.default
+        let script = fm.temporaryDirectory.appendingPathComponent("gloss-fake-claude-\(UUID().uuidString).py")
+        let source = """
+        #!/usr/bin/env python3
+        import sys, json, time
+        time.sleep(1.0)
+        print(json.dumps({"type": "system", "subtype": "init"}), flush=True)
+        for line in sys.stdin:
+            try:
+                text = json.loads(line)["message"]["content"]
+            except Exception:
+                continue
+            if "met an English word" in text:
+                res = json.dumps({"word": "zelquin", "meaning_zh": "微調", "example": "Please zelquin it."})
+            else:
+                res = json.dumps({"fixed": "He goes home.", "short": "He goes.", "mistakes": []})
+            print(json.dumps({"type": "result", "subtype": "success", "is_error": False, "result": res}), flush=True)
+        """
+        try? source.write(to: script, atomically: true, encoding: .utf8)
+        try? fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: script.path)
+        let saved = (ClaudeRunner.override, ClaudeRunner.keepWarm, ClaudeRunner.model)
+        ClaudeRunner.stopSpare()
+        ClaudeRunner.override = (script.path, ProcessInfo.processInfo.environment["PATH"] ?? "/usr/bin:/bin")
+        ClaudeRunner.keepWarm = true
+        ClaudeRunner.model = "haiku"
+        ClaudeRunner.prewarm()
+
+        Task { @MainActor in
+            var notes: [String] = []
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            let readyFirst = ClaudeRunner.isReady
+            notes.append("ready ahead: \(readyFirst)")
+            var ok = readyFirst
+            let t0 = Date()
+            if let r = try? await ClaudeRunner.lookUp("zelqin") {
+                let dt = Date().timeIntervalSince(t0)
+                notes.append(String(format: "look-up “%@” → “%@” %@ in %.2f s", "zelqin", r.word, r.meaning_zh, dt))
+                ok = ok && r.word == "zelquin" && dt < 0.8
+            } else { ok = false; notes.append("look-up failed") }
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            let readyAgain = ClaudeRunner.isReady
+            notes.append("next one ready: \(readyAgain)")
+            let t1 = Date()
+            if let f = try? await ClaudeRunner.fix("He go home.") {
+                let dt = Date().timeIntervalSince(t1)
+                notes.append(String(format: "fix → “%@” in %.2f s", f.fixed, dt))
+                ok = ok && readyAgain && f.fixed == "He goes home." && dt < 0.8
+            } else { ok = false; notes.append("fix failed") }
+            ClaudeRunner.stopSpare()
+            (ClaudeRunner.override, ClaudeRunner.keepWarm, ClaudeRunner.model) = saved
+            try? fm.removeItem(at: script)
+            done(Step(step: "claude-warm", passed: ok, detail: notes.joined(separator: "; ")))
+        }
+    }
+
+    /// `--claude-check [model]`: the real Claude, warmed first; times a word look-up and a fix.
+    static func runClaudeCheck(model: String) {
+        runApp {
+            ClaudeRunner.model = model
+            ClaudeRunner.keepWarm = true
+            let tCold = Date()
+            ClaudeRunner.prewarm()
+            Task { @MainActor in
+                while !ClaudeRunner.isReady && Date().timeIntervalSince(tCold) < 30 { try? await Task.sleep(nanoseconds: 100_000_000) }
+                print(String(format: "Claude ready after %.1f s (model %@)", Date().timeIntervalSince(tCold), model))
+                try? await Task.sleep(nanoseconds: 3_000_000_000)
+                var t = Date()
+                do {
+                    let r = try await ClaudeRunner.lookUp("serendipitous")
+                    print(String(format: "look-up: %.1f s → %@ | %@ | %@", Date().timeIntervalSince(t), r.word, r.meaning_zh, r.example))
+                } catch { print("look-up failed: \(error.localizedDescription)") }
+                while !ClaudeRunner.isReady { try? await Task.sleep(nanoseconds: 100_000_000) }
+                try? await Task.sleep(nanoseconds: 3_000_000_000)
+                t = Date()
+                do {
+                    let f = try await ClaudeRunner.fix("I want check the logs of this server yesterday, it have many error.")
+                    print(String(format: "fix: %.1f s → %@ | %@ | %d mistakes: %@", Date().timeIntervalSince(t), f.fixed, f.short,
+                                 f.mistakes.count, f.mistakes.map { "\($0.from)→\($0.to) #\($0.category) \($0.why_zh)" }.joined(separator: "; ")))
+                } catch { print("fix failed: \(error.localizedDescription)") }
+                ClaudeRunner.stopSpare()
+                exit(0)
             }
         }
     }

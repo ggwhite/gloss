@@ -3,18 +3,22 @@ import Foundation
 public enum Deck: String, Codable, CaseIterable, Identifiable, Sendable {
     case spelling
     case usage
+    /// New words you looked up: the `## 問過的字` table (| 字 | 中文 | 例句 |) plus words added in Gloss.
+    case asked
 
     public var id: String { rawValue }
     public var headingPrefix: String {
         switch self {
         case .spelling: return "## 拼字"
         case .usage: return "## 用字"
+        case .asked: return "## 問過的字"
         }
     }
     public var title: String {
         switch self {
         case .spelling: return "Spelling (拼字)"
         case .usage: return "Word choice (用字)"
+        case .asked: return "New words (問過的字)"
         }
     }
 }
@@ -85,6 +89,10 @@ public enum VocabParser {
         func cell(_ i: Int) -> String { i < cells.count ? cells[i] : "" }
         let word = cleanAnswer(cell(0))
         guard !word.isEmpty else { return nil }
+        if deck == .asked {
+            // | 字 | 中文 | 例句 |: the example sentence is the hint shown after a mistake.
+            return VocabEntry(word: word, meaning: Markdown.strip(cell(1)), hint: Markdown.strip(cell(2)), count: 1, deck: deck)
+        }
         return VocabEntry(
             word: word,
             typed: Markdown.strip(cell(1)),

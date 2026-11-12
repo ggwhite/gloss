@@ -11,7 +11,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     static let tick: TimeInterval = 60
 
     let settings = AppSettings()
-    lazy var model = AppModel(settings: settings, store: StateStore(url: StateStore.defaultURL))
+    lazy var model = AppModel(settings: settings, store: StateStore(url: StateStore.defaultURL),
+                              wordStore: NewWordStore(url: NewWordStore.defaultURL))
     let router = Router()
     let notifier = Notifier()
     lazy var fix = FixController(settings: settings)
@@ -31,6 +32,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         router.hotKeyLabel = { [weak self] in self?.settings.hotKey.display ?? "" }
         router.openHotKeyLabel = { [weak self] in self?.settings.openHotKey.display ?? "" }
         router.showOverview = { [weak self] in self?.open(.overview) }
+        router.showAddWord = { [weak self] in self?.open(.addWord) }
+
+        // Keep a Claude waiting so Fix My English and word look-ups answer in about 2 s.
+        Publishers.CombineLatest(settings.$claudeModel, settings.$keepClaudeReady)
+            .removeDuplicates { $0 == $1 }
+            .sink { model, keep in
+                ClaudeRunner.model = model
+                ClaudeRunner.keepWarm = keep
+                ClaudePrewarm.schedule()
+            }
+            .store(in: &bag)
 
         notifier.onOpen = { [weak self] in self?.open(.quiz) }
         notifier.setUp()

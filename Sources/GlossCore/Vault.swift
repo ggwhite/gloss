@@ -8,8 +8,12 @@ public struct VaultSnapshot: Equatable, Sendable {
     public var loadedAt: Date = .distantPast
     public init() {}
 
+    /// The cards of the decks that are on. A word in several decks is quizzed once (spelling first),
+    /// because progress is kept per word.
     public func entries(for decks: Set<Deck>) -> [VocabEntry] {
-        Deck.allCases.filter(decks.contains).flatMap { self.decks[$0] ?? [] }
+        var seen = Set<String>()
+        return Deck.allCases.filter(decks.contains).flatMap { self.decks[$0] ?? [] }
+            .filter { seen.insert($0.word.lowercased()).inserted }
     }
 }
 

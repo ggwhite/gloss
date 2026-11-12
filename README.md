@@ -98,6 +98,13 @@ and its category. **Listen** reads it aloud; **Copy** puts it on the clipboard.
 </tr>
 </table>
 
+**Add words you don't know** — on the **Add Word** page (or **+** in the menu), type a word you just met and
+press Enter: Claude fills in a Traditional Chinese meaning and an example sentence in about a second. Add it and it
+joins the **New words** deck (your `## 問過的字` table), ready to practise.
+
+**Fast answers** — Gloss keeps one Claude started and waiting (no hooks, MCP servers or tools), so a look-up takes
+about 1 second and a fix 2–7 seconds instead of 10+.
+
 **Also in the box**
 
 - 🔊 **Pronunciation** with the macOS English voice (⌘P on a card; spoken after each answer; optional dictation mode).
