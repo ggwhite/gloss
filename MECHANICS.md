@@ -147,7 +147,7 @@ Shown when the day's reviews are done (and from "Practise More" on the overview)
 | Value | Number | Source |
 |---|---|---|
 | New words deck | the `## 問過的字` table of 單字.md (`| 字 | 中文 | 例句 |`; the example is the hint after a mistake) plus words added in Gloss; on by default; a word already in another deck is quizzed once | person's follow-up |
-| Add Word page | type the word, Enter: Claude fills a Traditional Chinese meaning and an example (and fixes the spelling); ⌘↩ adds it; "Practise These" starts a practice round | person's follow-up |
+| Add Word page | opened from "+ Add Word" in the overview header (⌘N), the sidebar, or + in the menu popover; type the word, Enter: Claude fills a Traditional Chinese meaning and an example (and fixes the spelling); ⌘↩ adds it; "Practise These" starts a practice round | person's follow-up |
 | Where a new word goes | with "Write to my notes" on: a new row at the end of `## 問過的字` (refused if the word is there or the table has other columns); off: `~/Library/Application Support/Gloss/words.json` | estimated |
 | Claude start-up | 5.3 s before the model sees a question (measured, `claude -p "ok"`) | measured |
 | Waiting Claude | one `claude -p --input-format stream-json` started ahead; each question gets a fresh one, the next starts in the background; replaced after 60 min | person's follow-up (speed) |

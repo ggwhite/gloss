@@ -161,6 +161,11 @@ struct HomeView: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
+            // Where new words go in: the Add Word page (⌘N).
+            Button { router.showAddWord() } label: { Label("Add Word", systemImage: "plus") }
+                .buttonStyle(GlassPillStyle(tint: Theme.accent, prominent: true, compact: true))
+                .keyboardShortcut("n", modifiers: .command)
+                .help("Add a new word you met (⌘N)")
             FloatingAppIcon(size: 58)
                 .shadow(color: Theme.blue.opacity(0.5), radius: 12, y: 4)
         }

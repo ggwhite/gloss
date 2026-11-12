@@ -98,7 +98,8 @@ and its category. **Listen** reads it aloud; **Copy** puts it on the clipboard.
 </tr>
 </table>
 
-**Add words you don't know** — on the **Add Word** page (or **+** in the menu), type a word you just met and
+**Add words you don't know** — click **+ Add Word** at the top of the overview (⌘N), the **Add Word** page in the
+sidebar, or **+** in the menu bar popover; type a word you just met and
 press Enter: Claude fills in a Traditional Chinese meaning and an example sentence in about a second. Add it and it
 joins the **New words** deck (your `## 問過的字` table), ready to practise.
 

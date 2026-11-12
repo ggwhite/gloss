@@ -109,6 +109,8 @@ enum Recorder {
     private static func popover<V: View>(_ v: V) -> some View {
         v.popoverChrome()
             .padding(24)
+            // Fill the whole frame: the popover keeps its own height, which may be less than the frame.
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .background(AuroraBackdrop())
     }
 
