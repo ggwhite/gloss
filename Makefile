@@ -24,6 +24,9 @@ demos:
 install:
 	RELEASE=1 ./scripts/bundle.sh
 	-osascript -e 'quit app "Gloss"'
+	@# Wait for the old Gloss to exit, or `open` below only re-activates it as it quits.
+	@for i in 1 2 3 4 5 6 7 8 9 10; do pgrep -f /Applications/Gloss.app/Contents/MacOS/Gloss >/dev/null || break; sleep 0.5; done
+	-@pkill -f /Applications/Gloss.app/Contents/MacOS/Gloss; sleep 0.5
 	rm -rf /Applications/Gloss.app
 	ditto build/Gloss.app /Applications/Gloss.app
 	open /Applications/Gloss.app
