@@ -29,7 +29,11 @@ install:
 	-@pkill -f /Applications/Gloss.app/Contents/MacOS/Gloss; sleep 0.5
 	rm -rf /Applications/Gloss.app
 	ditto build/Gloss.app /Applications/Gloss.app
+	@# Register the fresh copy with Launch Services, then open it (again if it didn't start).
+	-@/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f /Applications/Gloss.app
 	open /Applications/Gloss.app
+	@sleep 2; pgrep -f /Applications/Gloss.app/Contents/MacOS/Gloss >/dev/null || open /Applications/Gloss.app
+	@sleep 1; pgrep -f /Applications/Gloss.app/Contents/MacOS/Gloss >/dev/null && echo "Gloss is running" || echo "Gloss did not start: open /Applications/Gloss.app"
 
 screenshot: build
 	.build/debug/Gloss --screenshot shots/now.png
