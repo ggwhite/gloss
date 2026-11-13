@@ -20,7 +20,7 @@ struct SettingsView: View {
                 explain("checkmark.circle", Theme.good, "How an answer is checked — no AI",
                         "Your typing must match 正確拼法 exactly, ignoring upper/lower case and extra spaces. When it doesn't, a letter-by-letter comparison (edit distance) marks the letters that differ.")
                 explain("sparkles", Theme.violet, "When AI is used",
-                        "Only for Fix My English: the text you select or paste goes to the claude command (Claude Code) on this Mac. The quiz, schedule, stats and pronunciation (the macOS voice) all run offline.")
+                        "Only for Fix My English and for Look Up on the Add Word page: the text you select or paste, or the word you type, goes to the claude command (Claude Code) on this Mac. Look Up is not a dictionary: Claude writes the meaning and example, so check them. The quiz, schedule, stats and pronunciation (the macOS voice) all run offline.")
             }
             Section(settings.saveFixMistakes ? "Vault" : "Vault (read-only)") {
                 HStack {

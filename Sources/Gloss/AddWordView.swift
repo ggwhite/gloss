@@ -34,9 +34,11 @@ struct AddWordView: View {
                         }
                         .buttonStyle(GlassPillStyle(compact: true))
                         .disabled(word.trimmingCharacters(in: .whitespaces).isEmpty || looking)
-                        if let lookTime {
-                            Text(String(format: "answered in %.1f s", lookTime)).font(.caption2).foregroundStyle(.secondary)
-                        }
+                        // Where the meaning comes from: Claude, not a dictionary.
+                        Text(lookTime.map { String(format: "Claude (%@) answered in %.1f s — check it before adding", ClaudeRunner.model.capitalized, $0) }
+                             ?? "Asks Claude (\(ClaudeRunner.model.capitalized)) on this Mac — not a dictionary")
+                            .font(.caption2).foregroundStyle(.secondary)
+                            .help("Look Up sends the word to the claude command (Claude Code). It returns the right spelling, a short Traditional Chinese meaning and one example sentence. Change the model in Settings → Claude.")
                         Spacer()
                         if !word.isEmpty { SpeakerButton(text: word, size: 26) }
                     }

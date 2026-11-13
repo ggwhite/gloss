@@ -120,7 +120,7 @@ about 1 second and a fix 2–7 seconds instead of 10+.
 |---|---|
 | **Where the words come from** | The table under `## 拼字` in your `單字.md` (and `## 用字` if you turn that deck on). Nothing is generated. |
 | **How an answer is checked** | **No AI.** Your typing must equal the correct spelling, ignoring case and extra spaces. On a mistake, an edit-distance comparison marks the letters that differ. |
-| **When AI is used** | Only by **Fix My English**, which sends the text you select or paste to the `claude` command (Claude Code) on your Mac. |
+| **When AI is used** | Only by **Fix My English** and by **Look Up** on the Add Word page (Claude writes the meaning and example — it is not a dictionary). Fix My English sends the text you select or paste to the `claude` command (Claude Code) on your Mac. |
 | **What runs offline** | The quiz, the schedule, stats, reminders and pronunciation. Gloss **only reads your vault** — it writes to it only when you turn on *Save Fix My English mistakes to vault* (off by default). |
 
 ### Spaced repetition
