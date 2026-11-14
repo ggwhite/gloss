@@ -11,6 +11,7 @@ struct SettingsView: View {
     @State private var loginError: String?
     @State private var trusted = AXIsProcessTrusted()
     @State private var claudeReady = ClaudeRunner.isReady
+    @ObservedObject private var pronouncer = Pronouncer.shared
 
     var body: some View {
         Form {
@@ -46,10 +47,24 @@ struct SettingsView: View {
                 Toggle("Say the word after each answer", isOn: $settings.speakOnAnswer)
                 Toggle("Say the word when a card appears (dictation mode)", isOn: $settings.speakOnShow)
                 HStack {
-                    Text("Voice: system English (en-US). Press ⌘P on a card to hear it.")
-                        .font(.caption).foregroundStyle(.secondary)
+                    Picker("Voice", selection: $settings.speakVoice) {
+                        Text("Most natural installed\(pronouncer.voices.first.map { " (\($0.name))" } ?? "")").tag("")
+                        ForEach(pronouncer.voices, id: \.id) { v in Text(v.title).tag(v.id) }
+                    }
+                    Button { pronouncer.say("Pronunciation sounds natural now.") } label: { Label("Test", systemImage: "speaker.wave.2.fill") }
+                        .buttonStyle(GlassPillStyle(compact: true))
+                }
+                if pronouncer.needsBetterVoice {
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "waveform.badge.plus").foregroundStyle(.orange)
+                        Text("Only basic (robotic) voices are on this Mac. Download a natural one once — free, works offline: System Settings → Accessibility → Spoken Content → System Voice → Manage Voices… → English → Ava (Premium), Zoe (Premium) or Evan (Enhanced). Gloss picks it up by itself.")
+                            .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                HStack {
+                    Text("Press ⌘P on a card to hear it.").font(.caption).foregroundStyle(.secondary)
                     Spacer()
-                    Button { Pronouncer.shared.say("pronunciation") } label: { Label("Test", systemImage: "speaker.wave.2.fill") }
+                    Button { NSWorkspace.shared.open(Pronouncer.voicesSettingsURL) } label: { Label("Get More Voices…", systemImage: "arrow.down.circle") }
                         .buttonStyle(GlassPillStyle(compact: true))
                 }
             }

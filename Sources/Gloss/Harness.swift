@@ -146,6 +146,8 @@ enum Harness {
             // `--page <name>` draws only that page of the main window (to check one page).
             let args = CommandLine.arguments
             let onlyPage = args.firstIndex(of: "--page").flatMap { i in i + 1 < args.count ? Page(rawValue: args[i + 1]) : nil }
+            // `--height <points>` makes the page taller (to see the bottom of long pages such as Settings).
+            let pageHeight = args.firstIndex(of: "--height").flatMap { i in i + 1 < args.count ? Double(args[i + 1]) : nil } ?? 760
             // A model whose due cards are all answered, for the "keep practising" screen.
             let doneModel = demoModelWithHistory(clock)
             doneModel.openQuiz()
@@ -161,7 +163,7 @@ enum Harness {
             let root: AnyView = onlyPage == nil
                 ? AnyView(Showcase(home: home, wrong: wrong, windowModel: doneModel, router: Router(), nav: quizNav))
                 : AnyView(MainWindowView().environmentObject(home).environmentObject(Router()).environmentObject(pageNav)
-                    .frame(width: 1000, height: 760).background(Theme.wash).background(Theme.navy)
+                    .frame(width: 1000, height: pageHeight).background(Theme.wash).background(Theme.navy)
                     .environment(\.simulatedGlass, true).environment(\.colorScheme, .dark))
             let host = NSHostingView(rootView: root)
             host.frame.size = host.fittingSize
@@ -353,8 +355,9 @@ enum Harness {
                 let answerSaid = Pronouncer.shared.lastSpoken
                 let pronounceOK = cardWord != nil && buttonSaid == cardWord && answerSaid == cardWord
                     && Pronouncer.shared.spokenCount == spokenBefore + 2
+                    && Pronouncer.shared.voices.allSatisfy { !$0.isRobotic }
                 steps.append(Step(step: "pronounce", passed: pronounceOK,
-                                  detail: "speaker button says “\(buttonSaid ?? "nothing")”; after an answer it says “\(answerSaid ?? "nothing")” (en-US system voice, \(Pronouncer.rateFactor)× speed)"))
+                                  detail: "speaker button says “\(buttonSaid ?? "nothing")”; after an answer it says “\(answerSaid ?? "nothing")” (voice \(Pronouncer.shared.current?.title ?? "en-US fallback"), best of \(Pronouncer.shared.voices.count) English voices (robotic engines left out), \(Pronouncer.rateFactor)× speed)"))
 
                 let pageInk = pageHosts.map { ($0.0, inkRatio(of: $0.1)) }
                 let pagesOK = pageInk.allSatisfy { $0.1 > 0.05 }

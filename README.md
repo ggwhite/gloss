@@ -112,7 +112,7 @@ about 1 second and a fix 2–7 seconds instead of 10+.
 
 **Also in the box**
 
-- 🔊 **Pronunciation** with the macOS English voice (⌘P on a card; spoken after each answer; optional dictation mode).
+- 🔊 **Pronunciation** with the most natural English voice on your Mac — it picks Premium/Enhanced voices (e.g. Ava, Zoe) when installed, or any voice you choose in Settings (⌘P on a card; spoken after each answer; optional dictation mode).
 - 📊 **Stats**: mistakes per category for 7 and 30 days, your 10 most repeated words, quiz accuracy per day.
 - 🔔 **Nudges**: a notification every 60 minutes while cards are due, outside quiet hours (22:00–09:00). Click it to open the quiz.
 - 🫧 **Dark blue-violet Liquid Glass** on macOS 26 (frosted material on 14–15), with motion that switches off under *Reduce motion*.

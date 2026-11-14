@@ -75,8 +75,10 @@ Every number that shapes how Gloss behaves. "request" means the person's build r
 | Say the word after each answer | on (setting) | person's follow-up request; default estimated |
 | Say the word when a card appears | off (setting) | estimated |
 | Pronounce shortcut | ⌘P | estimated |
-| Voice | system English (en-US), offline | estimated |
-| Speed | 0.85 × system default | estimated |
+| Voice | the most natural installed English voice, offline: Premium > Enhanced > Standard, then en-US > en-GB > other English; the old Eloquence (Eddy, Flo…), classic (Fred, Ralph…) and novelty voices are left out; a fixed choice in Settings wins while installed | person's follow-up (voice too robotic) |
+| Voice list refresh | when Gloss becomes active (a voice downloaded meanwhile is used at once) | estimated |
+| Download hint | shown when no Enhanced or Premium English voice is installed; "Get More Voices…" opens System Settings → Accessibility → Spoken Content | estimated |
+| Speed | 0.9 × system default | person's follow-up (voice too robotic) |
 
 ## Look
 

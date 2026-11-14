@@ -21,6 +21,10 @@ final class AppSettings: ObservableObject {
     @Published var newPerDay: Int { didSet { defaults.set(newPerDay, forKey: Keys.newPerDay) } }
     @Published var speakOnAnswer: Bool { didSet { defaults.set(speakOnAnswer, forKey: Keys.speakOnAnswer) } }
     @Published var speakOnShow: Bool { didSet { defaults.set(speakOnShow, forKey: Keys.speakOnShow) } }
+    /// The voice id chosen in Settings; empty means "the most natural one installed".
+    @Published var speakVoice: String {
+        didSet { defaults.set(speakVoice, forKey: Keys.speakVoice); Pronouncer.chosenVoice = speakVoice }
+    }
     @Published var hotKey: HotKeyCombo {
         didSet { defaults.set(try? JSONEncoder().encode(hotKey), forKey: Keys.hotKey) }
     }
@@ -40,7 +44,7 @@ final class AppSettings: ObservableObject {
         static let nudgeMinutes = "nudge.minutes", nudgesOn = "nudge.on"
         static let quietStart = "quiet.start", quietEnd = "quiet.end"
         static let newPerDay = "newPerDay", hotKey = "hotKey", lastNudge = "nudge.last"
-        static let speakOnAnswer = "speak.onAnswer", speakOnShow = "speak.onShow"
+        static let speakOnAnswer = "speak.onAnswer", speakOnShow = "speak.onShow", speakVoice = "speak.voice"
         static let openHotKey = "openHotKey", welcomeDone = "welcomeDone", dockWhileOpen = "dockWhileOpen"
         static let copyReps = "copyReps"
         static let saveFixMistakes = "fix.saveToVault"
@@ -66,6 +70,9 @@ final class AppSettings: ObservableObject {
         quietStart = defaults.object(forKey: Keys.quietStart) as? Int ?? QuietHours.default.start
         quietEnd = defaults.object(forKey: Keys.quietEnd) as? Int ?? QuietHours.default.end
         newPerDay = defaults.object(forKey: Keys.newPerDay) as? Int ?? Defaults.newPerDay
+        let voice = defaults.string(forKey: Keys.speakVoice) ?? ""
+        speakVoice = voice
+        Pronouncer.chosenVoice = voice
         speakOnAnswer = defaults.object(forKey: Keys.speakOnAnswer) as? Bool ?? true
         speakOnShow = defaults.object(forKey: Keys.speakOnShow) as? Bool ?? false
         if let data = defaults.data(forKey: Keys.hotKey), let k = try? JSONDecoder().decode(HotKeyCombo.self, from: data) {

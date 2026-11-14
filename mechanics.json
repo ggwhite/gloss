@@ -184,13 +184,13 @@
     {
       "name": "speech voice",
       "group": "pronunciation",
-      "value": "system en-US",
+      "value": "most natural installed English voice: Premium > Enhanced > Standard, then en-US > en-GB > other English; Eloquence, classic and novelty voices left out; choosable in Settings",
       "estimated": true
     },
     {
       "name": "speech rate",
       "group": "pronunciation",
-      "value": 0.85,
+      "value": 0.9,
       "unit": "x default",
       "estimated": true
     },
