@@ -717,6 +717,28 @@ enum Harness {
         }
     }
 
+    /// `--fill-examples`: fills the missing examples for the person's real words (Gloss's word-notes.json,
+    /// never the vault), as the Words page button does.
+    static func runFillExamples() {
+        runApp {
+            let settings = AppSettings()
+            ClaudeRunner.model = settings.claudeModel
+            ClaudeRunner.keepWarm = false
+            let m = AppModel(settings: settings, store: StateStore(url: StateStore.defaultURL),
+                             wordStore: NewWordStore(url: NewWordStore.defaultURL),
+                             noteStore: WordNoteStore(url: WordNoteStore.defaultURL))
+            Task { @MainActor in
+                let before = m.allWords.filter { !$0.example.isEmpty }.count
+                let t = Date()
+                await m.fillMissingExamples()
+                let after = m.allWords.filter { !$0.example.isEmpty }.count
+                print(String(format: "examples: %d → %d of %d words in %.0f s%@", before, after, m.allWords.count,
+                             Date().timeIntervalSince(t), m.exampleError.map { " — \($0)" } ?? ""))
+                exit(0)
+            }
+        }
+    }
+
     /// CPU time this process used, in seconds (user + system).
     static func cpuSeconds() -> Double {
         var u = rusage()

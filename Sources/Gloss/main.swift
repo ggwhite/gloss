@@ -7,7 +7,9 @@ func value(after flag: String) -> String? {
     return arguments[i + 1]
 }
 
-if arguments.contains("--claude-check") {
+if arguments.contains("--fill-examples") {
+    MainActor.assumeIsolated { Harness.runFillExamples() }
+} else if arguments.contains("--claude-check") {
     let model = value(after: "--claude-check").flatMap { $0.hasPrefix("--") ? nil : $0 } ?? "haiku"
     MainActor.assumeIsolated { Harness.runClaudeCheck(model: model) }
 } else if arguments.contains("--cpu-check") {
