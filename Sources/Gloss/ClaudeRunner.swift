@@ -71,11 +71,37 @@ enum ClaudeRunner {
         let fresh = spare.map { $0.isAlive && $0.model == model && Date().timeIntervalSince($0.started) < spareMaxAge } ?? false
         lock.unlock()
         guard !fresh, let next = try? start() else { return }
+        next.onExit = { [weak next] in if let next { spareExited(next) } }
         lock.lock()
         let old = spare
         spare = next
         lock.unlock()
         old?.stop()
+    }
+
+    nonisolated(unsafe) private static var quickExits = 0
+
+    /// The waiting Claude ended by itself (an update, a crash, a time-out): start another one.
+    /// One that ends within 30 s of starting (say, not logged in) waits longer each time: 15 s, 30 s … 5 min.
+    private static func spareExited(_ w: WarmClaude) {
+        lock.lock()
+        guard spare === w else { lock.unlock(); return }   // used for a question, or already replaced
+        spare = nil
+        let lived = Date().timeIntervalSince(w.started)
+        // Failing by itself soon after starting backs off; being ended from outside (a signal) does not.
+        let failedEarly = lived < 30 && !w.endedBySignal && w.exitStatus != 0
+        quickExits = failedEarly ? quickExits + 1 : 0
+        let delay = quickExits == 0 ? 2.0 : min(300, 15 * pow(2, Double(quickExits - 1)))
+        lock.unlock()
+        w.stop()
+        guard keepWarm else { return }
+        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + delay) { refreshSpare() }
+    }
+
+    /// The waiting Claude's process id (Settings and the self-test).
+    static var sparePID: Int32? {
+        lock.lock(); defer { lock.unlock() }
+        return spare.flatMap { $0.isAlive ? $0.pid : nil }
     }
 
     static func stopSpare() {
@@ -137,6 +163,11 @@ enum ClaudeRunner {
 final class WarmClaude: @unchecked Sendable {
     let model: String
     let started = Date()
+    /// Called when the process ends, for whatever reason.
+    var onExit: (() -> Void)?
+    var pid: Int32 { process.processIdentifier }
+    var endedBySignal: Bool { !process.isRunning && process.terminationReason == .uncaughtSignal }
+    var exitStatus: Int32 { process.isRunning ? 0 : process.terminationStatus }
     private let process = Process()
     private let input = Pipe()
     private let output = Pipe()
@@ -162,13 +193,23 @@ final class WarmClaude: @unchecked Sendable {
         process.standardInput = input
         process.standardOutput = output
         process.standardError = errors
-        output.fileHandleForReading.readabilityHandler = { [weak self] h in self?.received(h.availableData) }
+        // An empty read means the pipe reached its end (Claude exited). The handler must be removed then:
+        // it is called again and again at end of file, which spins a CPU core.
+        output.fileHandleForReading.readabilityHandler = { [weak self] h in
+            let d = h.availableData
+            if d.isEmpty { h.readabilityHandler = nil; return }
+            self?.received(d)
+        }
         errors.fileHandleForReading.readabilityHandler = { [weak self] h in
             let d = h.availableData
-            guard let self, !d.isEmpty else { return }
+            if d.isEmpty { h.readabilityHandler = nil; return }
+            guard let self else { return }
             self.lock.lock(); self.errText += String(decoding: d, as: UTF8.self); self.lock.unlock()
         }
-        process.terminationHandler = { [weak self] _ in self?.done.signal() }
+        process.terminationHandler = { [weak self] _ in
+            self?.done.signal()
+            DispatchQueue.global().async { self?.onExit?() }
+        }
         try process.run()
     }
 

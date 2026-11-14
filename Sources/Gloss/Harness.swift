@@ -47,7 +47,15 @@ enum Harness {
         var snap = DemoDeck.snapshot
         snap.mistakes = MistakeParser.parse(DemoDeck.mistakes, day: today)
             + MistakeParser.parse("- `in monday` → `on Monday` — 星期幾用 on #介系詞\n- `a advice` → `advice` — 不可數 #冠詞", day: today.adding(days: -2, calendar: cal))
-        return AppModel(settings: demoSettings(), store: nil, fixedSnapshot: snap, initialState: st, now: { clock.now })
+        // Examples for some made-up words (the Words page shows both kinds).
+        let notes = WordNoteStore(url: FileManager.default.temporaryDirectory
+            .appendingPathComponent("gloss-demo-notes-\(UUID().uuidString).json"))
+        try? notes.merge([
+            "flumbrance": WordNote(meaning: "容量", example: "We need more flumbrance on the database server before Friday."),
+            "quintavel": WordNote(meaning: "閃爍", example: "The status light started to quintavel after the deploy."),
+            "zorbitude": WordNote(meaning: "耐心", example: "Debugging a flaky test takes real zorbitude."),
+        ])
+        return AppModel(settings: demoSettings(), store: nil, fixedSnapshot: snap, initialState: st, noteStore: notes, now: { clock.now })
     }
 
     static let sampleFix = FixResult(
@@ -599,7 +607,10 @@ enum Harness {
                 text = json.loads(line)["message"]["content"]
             except Exception:
                 continue
-            if "met an English word" in text:
+            if "For each English word below" in text:
+                words = [l[2:].split(" (")[0].strip() for l in text.splitlines() if l.startswith("- ")]
+                res = json.dumps({"items": [{"word": w, "meaning_zh": "意思", "example": "A sentence with " + w + "."} for w in words]})
+            elif "met an English word" in text:
                 res = json.dumps({"word": "zelquin", "meaning_zh": "微調", "example": "Please zelquin it."})
             else:
                 res = json.dumps({"fixed": "He goes home.", "short": "He goes.", "mistakes": []})
@@ -635,8 +646,32 @@ enum Harness {
                 notes.append(String(format: "fix → “%@” in %.2f s", f.fixed, dt))
                 ok = ok && readyAgain && f.fixed == "He goes home." && dt < 0.8
             } else { ok = false; notes.append("fix failed") }
+            // The waiting one ends by itself: another must start.
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            if let pid = ClaudeRunner.sparePID {
+                kill(pid, SIGTERM)
+                try? await Task.sleep(nanoseconds: 4_500_000_000)
+                let back = ClaudeRunner.sparePID
+                notes.append("ended on purpose → a new one \(back != nil && back != pid ? "started" : "did NOT start")")
+                ok = ok && back != nil && back != pid
+            } else { ok = false; notes.append("no waiting Claude to end") }
+
+            // Words page: fill the missing examples for the demo deck through the same stand-in.
+            let notesURL = fm.temporaryDirectory.appendingPathComponent("gloss-notes-\(UUID().uuidString).json")
+            let wm = AppModel(settings: demoSettings(), store: nil, fixedSnapshot: DemoDeck.snapshot,
+                              noteStore: WordNoteStore(url: notesURL), now: { demoMorning() })
+            let before = wm.allWords.filter { !$0.example.isEmpty }.count
+            await wm.fillMissingExamples()
+            let words = wm.allWords
+            let after = words.filter { !$0.example.isEmpty }.count
+            notes.append("examples \(before)/\(words.count) → \(after)/\(words.count)")
+            ok = ok && after == words.count && words.allSatisfy { !$0.meaning.isEmpty } && wm.exampleJob == nil
+            try? fm.removeItem(at: notesURL)
+            // Never start the real Claude from a test: keep no waiting one after the stand-in is gone.
+            ClaudeRunner.keepWarm = false
+            try? await Task.sleep(nanoseconds: 500_000_000)  // let started spares settle, then stop them
             ClaudeRunner.stopSpare()
-            (ClaudeRunner.override, ClaudeRunner.keepWarm, ClaudeRunner.model) = saved
+            (ClaudeRunner.override, ClaudeRunner.model) = (saved.0, saved.2)
             try? fm.removeItem(at: script)
             done(Step(step: "claude-warm", passed: ok, detail: notes.joined(separator: "; ")))
         }
@@ -666,6 +701,16 @@ enum Harness {
                     print(String(format: "fix: %.1f s → %@ | %@ | %d mistakes: %@", Date().timeIntervalSince(t), f.fixed, f.short,
                                  f.mistakes.count, f.mistakes.map { "\($0.from)→\($0.to) #\($0.category) \($0.why_zh)" }.joined(separator: "; ")))
                 } catch { print("fix failed: \(error.localizedDescription)") }
+                while !ClaudeRunner.isReady { try? await Task.sleep(nanoseconds: 100_000_000) }
+                try? await Task.sleep(nanoseconds: 6_000_000_000)
+                t = Date()
+                let words = [("deprecate", "棄用"), ("throttle", "節流"), ("idempotent", ""), ("rollback", "回滾")]
+                do {
+                    let reply = try await ClaudeRunner.ask(ExampleBatch.prompt(for: words.map { (word: $0.0, meaning: $0.1) }))
+                    let notes = try ExampleBatch.parse(reply, asked: words.map(\.0))
+                    print(String(format: "examples: %.1f s for %d words → %d notes", Date().timeIntervalSince(t), words.count, notes.count))
+                    for (k, v) in notes.sorted(by: { $0.key < $1.key }) { print("  \(k): \(v.meaning) | \(v.example)") }
+                } catch { print("examples failed: \(error.localizedDescription)") }
                 ClaudeRunner.stopSpare()
                 exit(0)
             }

@@ -103,6 +103,10 @@ sidebar, or **+** in the menu bar popover; type a word you just met and
 press Enter: Claude fills in a Traditional Chinese meaning and an example sentence in about a second. Add it and it
 joins the **New words** deck (your `## 問過的字` table), ready to practise.
 
+**Read all your words** — the **Words** page lists every word with its meaning, an example sentence (the word
+highlighted), your memory hint, how often you missed it and where it is in the schedule; search, filter by deck and
+sort. **Fill missing examples** has Claude write a sentence for words without one (kept in Gloss, not your notes).
+
 **Fast answers** — Gloss keeps one Claude started and waiting (no hooks, MCP servers or tools), so a look-up takes
 about 1 second and a fix 2–7 seconds instead of 10+.
 

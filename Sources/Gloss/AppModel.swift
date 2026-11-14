@@ -50,10 +50,24 @@ final class AppModel: ObservableObject {
 
     /// Words added by hand while Gloss may not write to the vault (nil: none kept).
     let wordStore: NewWordStore?
+    /// Meanings and examples Claude wrote for words whose table has no example column (nil: none kept).
+    let noteStore: WordNoteStore?
+    @Published private(set) var notes: [String: WordNote] = [:]
+    /// The "Fill missing examples" job while it runs.
+    @Published private(set) var exampleJob: ExampleJob?
+
+    struct ExampleJob: Equatable {
+        var done = 0
+        var total: Int
+        var failed = 0
+        var lastError: String?
+    }
 
     init(settings: AppSettings, store: StateStore?, fixedSnapshot: VaultSnapshot? = nil, initialState: GlossState? = nil,
-         wordStore: NewWordStore? = nil, calendar: Calendar = .current, now: @escaping () -> Date = Date.init) {
+         wordStore: NewWordStore? = nil, noteStore: WordNoteStore? = nil,
+         calendar: Calendar = .current, now: @escaping () -> Date = Date.init) {
         self.wordStore = wordStore
+        self.noteStore = noteStore
         self.settings = settings
         self.store = store
         self.fixedSnapshot = fixedSnapshot
@@ -86,6 +100,7 @@ final class AppModel: ObservableObject {
             snapshot = Vault.load(path: settings.vaultPath, now: now())
         }
         mergeAddedWords()
+        loadNotes()
         refreshDue()
         if session == nil || phase == .done { startSession() }
     }
@@ -152,6 +167,71 @@ final class AppModel: ObservableObject {
         case .wrong: copyOrNext()
         case .correct: next()
         case .done: startSession()
+        }
+    }
+
+    // MARK: Words page
+
+    /// Every word in every deck (on or off), once each, with its meaning and example.
+    var allWords: [WordInfo] {
+        WordInfo.build(snapshot.entries(for: Set(Deck.allCases)), notes: notes)
+    }
+
+    func loadNotes() {
+        notes = noteStore?.load() ?? [:]
+    }
+
+    /// Asks Claude for the missing examples (and meanings), 20 words a question, 3 questions at a time.
+    func fillMissingExamples() async {
+        guard exampleJob == nil, let noteStore else { return }
+        let batches = ExampleBatch.batches(allWords)
+        guard !batches.isEmpty else { return }
+        exampleJob = ExampleJob(total: batches.count)
+        await withTaskGroup(of: (ok: Bool, notes: [String: WordNote], error: String?).self) { group in
+            var next = 0
+            func launch() {
+                guard next < batches.count else { return }
+                let batch = batches[next]
+                next += 1
+                group.addTask {
+                    let words = batch.map { (word: $0.entry.word, meaning: $0.meaning) }
+                    do {
+                        let reply = try await ClaudeRunner.ask(ExampleBatch.prompt(for: words))
+                        return (true, try ExampleBatch.parse(reply, asked: words.map(\.word)), nil)
+                    } catch {
+                        return (false, [:], error.localizedDescription)
+                    }
+                }
+            }
+            for _ in 0..<Self.exampleParallel { launch() }
+            for await r in group {
+                if !r.notes.isEmpty, let all = try? noteStore.merge(r.notes) { notes = all }
+                exampleJob?.done += 1
+                if !r.ok { exampleJob?.failed += 1; exampleJob?.lastError = r.error }
+                launch()
+            }
+        }
+        let failed = exampleJob?.failed ?? 0
+        let lastError = exampleJob?.lastError
+        exampleJob = nil
+        if failed > 0 { exampleError = "\(failed) group\(failed == 1 ? "" : "s") failed: \(lastError ?? "")" } else { exampleError = nil }
+    }
+
+    /// Claude questions running at once while filling examples. See MECHANICS.md.
+    static let exampleParallel = 3
+    @Published var exampleError: String?
+
+    /// One word's example (the Words page's "Get one").
+    func fillExample(for info: WordInfo) async {
+        guard let noteStore else { return }
+        let w = (word: info.entry.word, meaning: info.meaning)
+        do {
+            let reply = try await ClaudeRunner.ask(ExampleBatch.prompt(for: [w]))
+            let got = try ExampleBatch.parse(reply, asked: [w.word])
+            if let all = try? noteStore.merge(got) { notes = all }
+            exampleError = got.isEmpty ? "Claude gave no example for “\(w.word)”." : nil
+        } catch {
+            exampleError = error.localizedDescription
         }
     }
 

@@ -153,3 +153,12 @@ Shown when the day's reviews are done (and from "Practise More" on the overview)
 | Waiting Claude | one `claude -p --input-format stream-json` started ahead; each question gets a fresh one, the next starts in the background; replaced after 60 min | person's follow-up (speed) |
 | Claude flags | `--setting-sources project --strict-mcp-config --tools "" --effort low --no-session-persistence --model haiku` (no hooks, MCP servers or tools) | measured |
 | Answer times | word look-up 1.2 s; fix 2.5–7 s depending on the answer's length (was 10.8 s) | measured with `--claude-check` |
+
+## Words page
+
+| Value | Number | Source |
+|---|---|---|
+| What it lists | every word of every deck (on or off), each once: meaning, example sentence (word highlighted), memory hint, times missed, status (New / Due / Box n), speaker for the word and the sentence | person's follow-up |
+| Search, filter, sort | search word / meaning / example / hint; All · Spelling · Word choice · New words; Needs practice (due, then low boxes, then most missed) · Most missed · A–Z | estimated |
+| Examples | 問過的字 rows use their own 例句; other words get one from Claude ("Fill missing examples": 20 words a question, 3 at once, about a minute for 280 words; or "Get one" per word); kept in `word-notes.json`, never in the vault | person's follow-up; measured 4 words in 1.9 s |
+| Waiting Claude ends by itself | a new one starts after 2 s; one that fails by itself within 30 s backs off 15 s, 30 s … 5 min; output pipes stop being read at end of file (no busy loop) | measured (a test spun 2 cores before the fix) |

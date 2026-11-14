@@ -12,7 +12,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     let settings = AppSettings()
     lazy var model = AppModel(settings: settings, store: StateStore(url: StateStore.defaultURL),
-                              wordStore: NewWordStore(url: NewWordStore.defaultURL))
+                              wordStore: NewWordStore(url: NewWordStore.defaultURL),
+                              noteStore: WordNoteStore(url: WordNoteStore.defaultURL))
     let router = Router()
     let notifier = Notifier()
     lazy var fix = FixController(settings: settings)

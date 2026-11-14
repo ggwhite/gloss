@@ -530,6 +530,37 @@
       "group": "decks",
       "value": "單字.md ## 問過的字 when writing to notes is on, else Gloss's words.json",
       "estimated": true
+    },
+    {
+      "name": "Words page",
+      "group": "words",
+      "value": "every word of every deck once, with meaning, example, memory hint, missed count, status; search, deck filter, sort",
+      "source": "person's follow-up (a panel to read all words with meaning and example)"
+    },
+    {
+      "name": "example batch size",
+      "group": "words",
+      "value": 20,
+      "unit": "words per Claude question",
+      "estimated": true
+    },
+    {
+      "name": "example questions at once",
+      "group": "words",
+      "value": 3,
+      "estimated": true
+    },
+    {
+      "name": "examples stored in",
+      "group": "words",
+      "value": "~/Library/Application Support/Gloss/word-notes.json (never the vault)",
+      "estimated": true
+    },
+    {
+      "name": "waiting Claude that ends by itself",
+      "group": "fix",
+      "value": "restarted after 2 s; early failures back off 15 s → 5 min",
+      "estimated": true
     }
   ]
 }
