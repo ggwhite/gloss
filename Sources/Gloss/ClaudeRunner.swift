@@ -98,6 +98,29 @@ enum ClaudeRunner {
         DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + delay) { refreshSpare() }
     }
 
+    /// Ends waiting Claude processes left by an earlier Gloss: their parent is gone (parent id 1) and they
+    /// carry exactly Gloss's flags. Claude does not quit when its input closes, so they would stay forever.
+    static func endOrphans() {
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/bin/ps")
+        p.arguments = ["-ww", "-axo", "pid=,ppid=,command="]
+        let out = Pipe()
+        p.standardOutput = out
+        p.standardError = FileHandle.nullDevice
+        guard (try? p.run()) != nil else { return }
+        let data = out.fileHandleForReading.readDataToEndOfFile()
+        p.waitUntilExit()
+        let flags = WarmClaude.arguments(model: "").dropLast()   // every flag except the model name
+        let signature = flags.filter { $0.hasPrefix("--") }
+        for line in String(decoding: data, as: UTF8.self).split(separator: "\n") {
+            let parts = line.split(separator: " ", maxSplits: 2, omittingEmptySubsequences: true)
+            guard parts.count == 3, let pid = Int32(parts[0]), parts[1] == "1" else { continue }
+            let command = String(parts[2])
+            guard command.contains("claude"), signature.allSatisfy({ command.contains($0) }) else { continue }
+            kill(pid, SIGTERM)
+        }
+    }
+
     /// The waiting Claude's process id (Settings and the self-test).
     static var sparePID: Int32? {
         lock.lock(); defer { lock.unlock() }

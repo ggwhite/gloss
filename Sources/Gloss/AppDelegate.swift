@@ -21,6 +21,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private lazy var watcher = VaultWatcher { [weak self] in self?.model.reloadVault() }
     private var timer: Timer?
     private var bag: Set<AnyCancellable> = []
+    private var terminationSignal: DispatchSourceSignal?
+
+    func applicationWillTerminate(_ notification: Notification) {
+        ClaudeRunner.stopSpare()
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppDelegate.current = self
@@ -34,6 +39,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         router.openHotKeyLabel = { [weak self] in self?.settings.openHotKey.display ?? "" }
         router.showOverview = { [weak self] in self?.open(.overview) }
         router.showAddWord = { [weak self] in self?.open(.addWord) }
+
+        // A waiting Claude must not outlive Gloss: end any left by an earlier copy, and end ours on quit.
+        DispatchQueue.global(qos: .utility).async { ClaudeRunner.endOrphans() }
+        signal(SIGTERM, SIG_IGN)
+        let term = DispatchSource.makeSignalSource(signal: SIGTERM, queue: .main)
+        term.setEventHandler { ClaudeRunner.stopSpare(); exit(0) }
+        term.resume()
+        terminationSignal = term
 
         // Keep a Claude waiting so Fix My English and word look-ups answer in about 2 s.
         Publishers.CombineLatest(settings.$claudeModel, settings.$keepClaudeReady)
